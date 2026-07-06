@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`export SVG 1:1 > snapshot du tracé du profil démo 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" width="50cm" height="58cm" viewBox="0 0 50 58" font-family="sans-serif">
+<g transform="translate(3 3.5)">
+<line x1="0" y1="0" x2="0" y2="43.5" stroke="#dc2626" stroke-width="0.05"/>
+<line x1="0" y1="43.5" x2="22" y2="43.5" stroke="#dc2626" stroke-width="0.05"/>
+<path d="M 0 2.5 C 2.635 2.5 6.686 2.506 7.5 0 L 19.864 4.017 C 19.47 5.804 17.321 11.34 17.5 14.737 C 17.679 18.133 20.189 22.609 20.939 24.396 C 21.689 26.183 21.823 25.28 22 25.457 L 20 43.5 L 1 43.5 L 0 25.457 L 0 2.5 Z" fill="none" stroke="black" stroke-width="0.08"/>
+<path d="M 9.5 43.5 L 10.5 23.45669470483482 L 11.5 43.5" fill="none" stroke="black" stroke-width="0.05"/>
+<line x1="4" y1="28.45669470483482" x2="4" y2="40.5" stroke="black" stroke-width="0.05"/>
+<text x="8" y="35.5" font-size="1.4" font-weight="bold" text-anchor="middle" fill="black">DOS</text>
+<line x1="44" y1="-0.5" x2="44" y2="43.5" stroke="#dc2626" stroke-width="0.05"/>
+<line x1="22" y1="43.5" x2="44" y2="43.5" stroke="#dc2626" stroke-width="0.05"/>
+<path d="M 22 25.457 L 24 43.5 L 44 43.5 L 44 9 C 44 4.965 38.269 3.126 36.5 -0.5 L 30.658 2.349 L 27.751 3.09 L 22.319 6.661 C 22.978 8.278 26.03 13.527 26.271 16.365 C 26.513 19.203 24.48 22.174 23.768 23.689 C 23.056 25.204 22.295 25.162 22 25.457 Z" fill="none" stroke="black" stroke-width="0.08"/>
+<path d="M 33.5 43.5 L 35 27.45669470483482 L 36.5 43.5" fill="none" stroke="black" stroke-width="0.05"/>
+<path d="M 30.657838699055414 2.3494124541290025 L 35 25.45669470483482 L 27.750796137935385 3.090427668437524" fill="none" stroke="black" stroke-width="0.05"/>
+<circle cx="35" cy="25.45669470483482" r="0.15" fill="black"/>
+<line x1="40" y1="28.45669470483482" x2="40" y2="40.5" stroke="black" stroke-width="0.05"/>
+<text x="36" y="35.5" font-size="1.4" font-weight="bold" text-anchor="middle" fill="black">DEVANT</text>
+</g>
+<rect x="3" y="50.5" width="10" height="10" fill="none" stroke="black" stroke-width="0.05"/>
+<text x="8" y="55.8" font-size="0.9" text-anchor="middle">carré de contrôle 10 cm</text>
+<text x="16" y="51.7" font-size="1.1">Patron de base — Demi-dos + Demi-devant</text>
+<text x="16" y="53.1" font-size="0.85">Généré le 06/07/2026 — échelle 1:1 — SANS valeurs de couture ni aisance</text>
+<text x="16" y="54.5" font-size="0.85">Poitrine 88 · Taille 68 · Bassin 92 · Cou 38</text>
+<text x="16" y="55.900000000000006" font-size="0.85">Long. dos 41 · Long. devant 44 · Carrure dos 35 · Carrure devant 33</text>
+<text x="16" y="57.300000000000004" font-size="0.85">Épaule 13 · Haut. poitrine 26 · Écart poitrine 18 (cm)</text>
+</svg>"
+`;
