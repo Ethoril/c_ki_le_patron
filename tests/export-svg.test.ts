@@ -14,10 +14,10 @@ describe("export SVG 1:1", () => {
   const pattern = generate(DEMO_MEASUREMENTS);
   const svg = buildExportSvg(pattern.pieces, DEMO_MEASUREMENTS, new Date(2026, 6, 6));
 
-  it("unités physiques en cm et carré de contrôle de 10 cm", () => {
+  it("unités physiques en cm et carré de contrôle de 5 cm", () => {
     expect(svg).toMatch(/width="[\d.]+cm" height="[\d.]+cm"/);
-    expect(svg).toContain('width="10" height="10"');
-    expect(svg).toContain("carré de contrôle 10 cm");
+    expect(svg).toContain('width="5" height="5"');
+    expect(svg).toContain("carré de contrôle 5 cm");
   });
 
   it("cartouche : mesures, date, mention sans coutures", () => {

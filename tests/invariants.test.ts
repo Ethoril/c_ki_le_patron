@@ -1,7 +1,7 @@
 /**
- * Invariants vrais pour TOUTE mensuration valide (cahier §4.5.2).
- * Property-based léger : 200 jeux de mesures plausibles tirés au hasard
- * (générateur déterministe, graine fixe → reproductible).
+ * Invariants vrais pour TOUTE mensuration valide (cahier §4.5.2, liste de
+ * docs/methode/buste.md §Invariants). Property-based léger : 200 jeux de
+ * mesures plausibles tirés au hasard (générateur déterministe, graine fixe).
  */
 
 import { describe, it, expect } from "vitest";
@@ -9,8 +9,8 @@ import { draftBuste } from "../src/engine/pieces/buste";
 import type { Measurements } from "../src/engine/measurements";
 import { validateBounds } from "../src/engine/measurements";
 import { METHOD } from "../src/engine/method";
-import { dist, sub } from "../src/engine/geometry/point";
-import { endTangent } from "../src/engine/geometry/curve";
+import { dist } from "../src/engine/geometry/point";
+import { startTangent, endTangent } from "../src/engine/geometry/curve";
 import { isClosed, outlineArea, selfIntersects, segmentLength } from "../src/engine/geometry/path";
 
 /** PRNG déterministe (mulberry32) : les 200 cas sont les mêmes à chaque run. */
@@ -65,7 +65,7 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("longueur d'épaule dos = longueur d'épaule devant (hors pince bretelle)", () => {
+  it("épaule dos = mesure ; épaule devant (hors pince) = mesure − 1 (embu, p. 47)", () => {
     for (const m of bodies) {
       const { dos, devant } = draftBuste(m);
       const epauleDos = dist(dos.points["snp-dos"], dos.points["epaule-dos"]);
@@ -73,42 +73,38 @@ describe("invariants sur 200 mensurations plausibles", () => {
         dist(devant.points["snp-devant"], devant.points["pince-bretelle-1"]) +
         dist(devant.points["pince-bretelle-2"], devant.points["epaule-devant"]);
       expect(epauleDos).toBeCloseTo(m.longueurEpaule, 6);
-      expect(epauleDevant).toBeCloseTo(m.longueurEpaule, 6);
+      expect(epauleDevant).toBeCloseTo(m.longueurEpaule - METHOD.EMBU_EPAULE_DOS, 6);
     }
   });
 
-  it("jambes de pince égalisées et symétriques autour de l'axe", () => {
+  it("jambes de pince égalisées et bouche = valeur", () => {
     for (const m of bodies) {
       const { dos, devant } = draftBuste(m);
       for (const piece of [dos, devant]) {
         for (const dart of piece.darts) {
-          expect(dist(dart.legs[0], dart.apex)).toBeCloseTo(dist(dart.legs[1], dart.apex), 6);
+          expect(dist(dart.legs[0], dart.apex)).toBeCloseTo(dist(dart.legs[1], dart.apex), 2);
           expect(dist(dart.legs[0], dart.legs[1])).toBeCloseTo(dart.value, 3);
         }
       }
     }
   });
 
-  it("largeur à la taille = tour de taille / 4 + excédent non absorbé", () => {
+  it("largeur à la taille = taille/4 ∓ 1, aux excédents signalés près", () => {
     for (const m of bodies) {
       const { dos, devant, report } = draftBuste(m);
-      const pinceDos = report.values.find((v) => v.key === "pinceDos")!.value;
-      const pinceDevant = report.values.find((v) => v.key === "pinceDevant")!.value;
-      const excedent = (m.tourPoitrine - m.tourTaille) / 4 -
-        (report.values.find((v) => v.key === "coteDos")!.value +
-          pinceDos +
-          report.values.find((v) => v.key === "milieuDos")!.value);
-      const dosLargeur = dos.points["taille-cote-dos"].x - dos.points["taille-milieu-dos"].x - pinceDos;
-      expect(dosLargeur).toBeCloseTo(m.tourTaille / 4 + Math.max(0, excedent), 6);
-      const excedentDevant = (m.tourPoitrine - m.tourTaille) / 4 -
-        (report.values.find((v) => v.key === "coteDevant")!.value + pinceDevant);
+      const get = (k: string) => report.values.find((v) => v.key === k)!.value;
+      const U = Math.max(0, (m.tourPoitrine - m.tourTaille) / 4);
+      const excedentDos = U - get("cote") - get("pinceDemiDos") - get("milieuDos");
+      const excedentDevant = U - get("cote") - get("pinceDevant");
+      const dosLargeur = dos.points["taille-cote-dos"].x - dos.points["taille-milieu-dos"].x - get("pinceDemiDos");
       const devantLargeur =
-        devant.points["taille-milieu-devant"].x - devant.points["taille-cote-devant"].x - pinceDevant;
-      expect(devantLargeur).toBeCloseTo(m.tourTaille / 4 + Math.max(0, excedentDevant), 6);
+        devant.points["taille-milieu-devant"].x - devant.points["taille-cote-devant"].x - get("pinceDevant");
+      expect(dosLargeur).toBeCloseTo(m.tourTaille / 4 - 1 + Math.max(0, excedentDos), 6);
+      expect(devantLargeur).toBeCloseTo(m.tourTaille / 4 + 1 + Math.max(0, excedentDevant), 6);
     }
   });
 
-  it("coutures de côté dos et devant de même longueur (raccord au montage)", () => {
+  it("pinces de côté de même valeur → coutures de côté dos et devant de même longueur", () => {
     for (const m of bodies) {
       const { dos, devant } = draftBuste(m);
       const coteDos = segmentLength(dos.outline.find((s) => s.kind === "line" && s.a === dos.points["dessous-bras"])!);
@@ -119,19 +115,35 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("encolures perpendiculaires aux épaules au raccord (pas de bec)", () => {
+  it("nuque SOUS la ligne d'épaule ; encolures plates au milieu (nuque et gorge)", () => {
     for (const m of bodies.slice(0, 50)) {
       const { dos, devant } = draftBuste(m);
-      // dos : tangente d'arrivée de l'encolure ⊥ direction d'épaule
-      const tDos = endTangent(dos.curves["encolure-dos"]);
-      const epDos = sub(dos.points["epaule-dos"], dos.points["snp-dos"]);
-      const nDos = Math.hypot(epDos.x, epDos.y);
-      expect(Math.abs((tDos.x * epDos.x + tDos.y * epDos.y) / nDos)).toBeLessThan(1e-6);
-      // devant : idem sur la première moitié d'épaule
-      const tDev = endTangent(devant.curves["encolure-devant"]);
-      const epDev = sub(devant.points["pince-bretelle-1"], devant.points["snp-devant"]);
-      const nDev = Math.hypot(epDev.x, epDev.y);
-      expect(Math.abs((tDev.x * epDev.x + tDev.y * epDev.y) / nDev)).toBeLessThan(1e-6);
+      expect(dos.points["nuque"].y).toBeGreaterThan(0);
+      // tangente horizontale à la nuque (départ de l'encolure dos)
+      const tDos = startTangent(dos.curves["encolure-dos"]);
+      expect(Math.abs(tDos.y)).toBeLessThan(1e-6);
+      // tangente horizontale à la gorge (départ de l'encolure devant)
+      const tDev = startTangent(devant.curves["encolure-devant"]);
+      expect(Math.abs(tDev.y)).toBeLessThan(1e-6);
+    }
+  });
+
+  it("emmanchures : passage par les points imposés, arrivée plate au dessous-bras", () => {
+    for (const m of bodies.slice(0, 50)) {
+      const { dos, devant } = draftBuste(m);
+      for (const [piece, ids] of [
+        [dos, ["carrure-dos", "bissectrice-dos", "platitude-dos"]],
+        [devant, ["carrure-devant", "bissectrice-devant", "platitude-devant"]],
+      ] as const) {
+        const junctions = piece.curves["emmanchure"].beziers.map((b) => b.p1);
+        for (const id of ids) {
+          const target = piece.points[id];
+          const ok = junctions.some((j) => dist(j, target) < 1e-6);
+          expect(ok, `${piece.id} passe par ${id}`).toBe(true);
+        }
+        const t = endTangent(piece.curves["emmanchure"]);
+        expect(Math.abs(t.y), `${piece.id} arrivée plate`).toBeLessThan(1e-6);
+      }
     }
   });
 
@@ -140,10 +152,9 @@ describe("invariants sur 200 mensurations plausibles", () => {
       const { report } = draftBuste(m);
       const get = (k: string) => report.values.find((v) => v.key === k)!.value;
       expect(get("pinceDevant")).toBeLessThanOrEqual(METHOD.PLAFOND_PINCE_DEVANT);
-      expect(get("pinceDos")).toBeLessThanOrEqual(METHOD.PLAFOND_PINCE_DEMI_DOS);
+      expect(get("pinceDemiDos")).toBeLessThanOrEqual(METHOD.PLAFOND_PINCE_DEMI_DOS);
       expect(get("milieuDos")).toBeLessThanOrEqual(METHOD.PLAFOND_MILIEU_DOS);
-      expect(get("coteDos")).toBeLessThanOrEqual(METHOD.PLAFOND_COTE_PAR_PIECE);
-      expect(get("coteDevant")).toBeLessThanOrEqual(METHOD.PLAFOND_COTE_PAR_PIECE);
+      expect(get("cote")).toBeLessThanOrEqual(METHOD.PLAFOND_COTE);
     }
   });
 });

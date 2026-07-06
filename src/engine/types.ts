@@ -17,6 +17,12 @@ export type Dart = {
   axis: [Pt, Pt];
   /** Valeur absorbée en cm (écart entre les jambes). */
   value: number;
+  /**
+   * Platitude à la taille (p. 59) : zone plate où les bords de pince sont
+   * parallèles, répartie autour de la ligne de taille. Absente pour les
+   * pinces hors taille (bretelle).
+   */
+  platitude?: number;
   label?: string;
 };
 
@@ -73,6 +79,8 @@ export type ReportValue = {
   value: number;
   unit?: string;
   bookRef?: string;
+  /** Le livre arrondit cette valeur au 1/2 cm supérieur sur ses planches (affichage uniquement). */
+  arrondi?: boolean;
 };
 
 export type DraftReport = {

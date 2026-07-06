@@ -13,11 +13,11 @@ export type Measurements = {
   carrureDos: number;
   /** Carrure devant (cm). */
   carrureDevant: number;
-  /** Longueur du dos, de la base de l'encolure à la taille (cm). */
+  /** Longueur du dos : du ras-du-cou sur la ligne d'épaule à la taille (cm, p. 18). */
   longueurDos: number;
-  /** Longueur devant, de la base de l'encolure côté cou à la taille, en passant sur le sein (cm). */
+  /** Longueur devant : de la ligne d'épaule à la taille, en passant sur le sein (cm). */
   longueurDevant: number;
-  /** Hauteur de poitrine : de la base de l'encolure côté cou au saillant (cm). */
+  /** Hauteur de poitrine : de la ligne d'épaule au saillant, verticalement (cm, p. 50). */
   hauteurPoitrine: number;
   /** Écart de poitrine : distance entre les deux saillants (cm). */
   ecartPoitrine: number;
