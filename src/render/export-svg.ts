@@ -1,6 +1,6 @@
 /**
  * Export SVG autonome à l'échelle 1:1 : unités physiques en cm (width/height
- * en "cm"), carré de contrôle de 10 cm, cartouche avec mesures, date, et
+ * en "cm"), carré de contrôle de 5 cm, cartouche avec mesures, date, et
  * mention « sans coutures ». Aucune dépendance DOM hormis le déclenchement
  * du téléchargement.
  */
@@ -8,9 +8,11 @@
 import type { PatternPiece } from "../engine/types";
 import type { Measurements } from "../engine/measurements";
 import { boundingBox, toSvgPath } from "../engine/geometry/path";
+import { dartOutline } from "../engine/drafting";
 
 const MARGE = 3; // cm autour du tracé
-const CARTOUCHE_H = 8; // cm réservés sous le tracé
+const CARTOUCHE_H = 7; // cm réservés sous le tracé
+const CARRE_CONTROLE = 5; // cm de côté
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -45,9 +47,10 @@ export function buildExportSvg(pieces: PatternPiece[], m: Measurements, date: Da
     }
     parts.push(`<path d="${toSvgPath(piece.outline)}" fill="none" stroke="black" stroke-width="0.08"/>`);
     for (const d of piece.darts) {
-      parts.push(
-        `<path d="M ${d.legs[0].x} ${d.legs[0].y} L ${d.apex.x} ${d.apex.y} L ${d.legs[1].x} ${d.legs[1].y}" fill="none" stroke="black" stroke-width="0.05"/>`,
-      );
+      const poly = dartOutline(d)
+        .map((p) => `${p.x} ${p.y}`)
+        .join(" L ");
+      parts.push(`<path d="M ${poly}" fill="none" stroke="black" stroke-width="0.05"/>`);
     }
     for (const mk of piece.marks) {
       if (mk.kind === "droit-fil" && mk.to) {
@@ -66,15 +69,17 @@ export function buildExportSvg(pieces: PatternPiece[], m: Measurements, date: Da
   }
   parts.push(`</g>`);
 
-  // Carré de contrôle 10 × 10 cm : à vérifier au réglet après impression
+  // Carré de contrôle 5 × 5 cm : à vérifier au réglet après impression
   const cy = max.y - min.y + 2 * MARGE + 0.5;
-  parts.push(`<rect x="${MARGE}" y="${cy}" width="10" height="10" fill="none" stroke="black" stroke-width="0.05"/>`);
   parts.push(
-    `<text x="${MARGE + 5}" y="${cy + 5.3}" font-size="0.9" text-anchor="middle">carré de contrôle 10 cm</text>`,
+    `<rect x="${MARGE}" y="${cy}" width="${CARRE_CONTROLE}" height="${CARRE_CONTROLE}" fill="none" stroke="black" stroke-width="0.05"/>`,
+  );
+  parts.push(
+    `<text x="${MARGE + CARRE_CONTROLE / 2}" y="${cy + CARRE_CONTROLE + 1.2}" font-size="0.9" text-anchor="middle">carré de contrôle ${CARRE_CONTROLE} cm</text>`,
   );
 
   // Cartouche
-  const cx = MARGE + 13;
+  const cx = MARGE + CARRE_CONTROLE + 3;
   const lignes = [
     `Patron de base — ${pieces.map((p) => p.title).join(" + ")}`,
     `Généré le ${date.toLocaleDateString("fr-FR")} — échelle 1:1 — SANS valeurs de couture ni aisance`,

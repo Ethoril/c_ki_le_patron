@@ -7,14 +7,16 @@
 
 import type { PatternPiece, Dart, Mark } from "../engine/types";
 import { toSvgPath } from "../engine/geometry/path";
+import { dartOutline } from "../engine/drafting";
 
 const STROKE = { vectorEffect: "non-scaling-stroke" as const };
 
 function DartShape({ dart }: { dart: Dart }) {
+  const poly = dartOutline(dart);
   return (
     <g>
       <path
-        d={`M ${dart.legs[0].x} ${dart.legs[0].y} L ${dart.apex.x} ${dart.apex.y} L ${dart.legs[1].x} ${dart.legs[1].y}`}
+        d={`M ${poly.map((p) => `${p.x} ${p.y}`).join(" L ")}`}
         fill="none"
         stroke="black"
         strokeWidth={1}

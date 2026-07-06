@@ -10,6 +10,23 @@ import type { Curve } from "./geometry/curve";
 import type { Segment } from "./geometry/path";
 import type { DraftStep, Dart, Mark, Label, PatternPiece } from "./types";
 
+/**
+ * Polyligne de tracé d'une pince, du bas d'une jambe au bas de l'autre.
+ * Avec platitude (pinces de taille, p. 59-60) : les bords remontent
+ * verticalement (zone plate autour de la taille) avant de rejoindre le sommet.
+ */
+export function dartOutline(d: Dart): Pt[] {
+  if (!d.platitude) return [d.legs[0], d.apex, d.legs[1]];
+  const demi = d.platitude / 2;
+  return [
+    d.legs[0],
+    { x: d.legs[0].x, y: d.legs[0].y - demi },
+    d.apex,
+    { x: d.legs[1].x, y: d.legs[1].y - demi },
+    d.legs[1],
+  ];
+}
+
 export class Draft {
   readonly id: string;
   readonly title: string;

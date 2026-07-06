@@ -1,160 +1,318 @@
 /**
  * Construction du buste de base (demi-dos + demi-devant), transcription
- * linéaire de docs/methode/buste.md — qui fait autorité sur ce fichier.
- * Chaque bloc est numéroté comme dans la note de méthode (dos 1-8, devant D1-D9).
+ * linéaire de docs/methode/buste.md (v2, validée sur les planches) — qui fait
+ * autorité sur ce fichier. Blocs numérotés comme la note (dos 1-8, devant
+ * D1-D9). Références de pages : Gilewska, « Les patrons de base sur mesure ».
  *
- * ⚠ Références de pages du livre à compléter lors de la validation de la
- * transcription (marqueurs [À VALIDER] dans docs/methode/buste.md).
+ * Repère : cm, y vers le bas, y = 0 sur la ligne d'épaule dos, milieu dos en
+ * x = 0, milieu devant en x = poitrine/2. Les lignes de côté dos et devant
+ * coïncident à x = poitrine/4 − 1 (largeurs ∓ 1, C5).
  */
 
 import type { Pt } from "../geometry/point";
 import { pt, polar, dist, rotateAround, scale } from "../geometry/point";
+import type { Curve } from "../geometry/curve";
 import { splineThrough, hermite, curveLength } from "../geometry/curve";
 import { Draft } from "../drafting";
-import { METHOD, repartirPinces } from "../method";
+import { METHOD, repartirPincesTaille } from "../method";
 import type { Measurements } from "../measurements";
 import type { PatternPiece, DraftReport, DraftWarning, ReportValue } from "../types";
 
 export type BusteResult = { dos: PatternPiece; devant: PatternPiece; report: DraftReport };
 
-/** Courbe d'encolure : tangente `t0` au départ, arrivée perpendiculaire à l'épaule. */
-function neckCurve(from: Pt, t0: Pt, to: Pt, arriveDir: Pt) {
+/** Courbe d'encolure : tangente `t0` au départ, tangente `t1` à l'arrivée (échelle = corde). */
+function neckCurve(from: Pt, t0: Pt, to: Pt, t1: Pt) {
   const chord = dist(from, to);
-  return hermite(from, scale(t0, chord), to, scale(arriveDir, chord));
+  return hermite(from, scale(t0, chord), to, scale(t1, chord));
+}
+
+/**
+ * Platitude d'emmanchure (p. 42, ét. 3) : rend le dernier segment de la
+ * spline (platitude → dessous-bras) rectiligne horizontal et raccorde le
+ * segment précédent tangent à l'horizontale — l'arrivée au point de côté
+ * est plate.
+ */
+function aplatirArrivee(c: Curve): Curve {
+  const beziers = c.beziers.map((b) => ({ ...b }));
+  const last = beziers[beziers.length - 1];
+  const y = last.p1.y;
+  last.c1 = { x: last.p0.x + (last.p1.x - last.p0.x) / 3, y };
+  last.c2 = { x: last.p0.x + (2 * (last.p1.x - last.p0.x)) / 3, y };
+  if (beziers.length >= 2) {
+    const prev = beziers[beziers.length - 2];
+    const l = Math.hypot(prev.p1.x - prev.c2.x, prev.p1.y - prev.c2.y) || 0.3;
+    const dir = Math.sign(last.p1.x - last.p0.x) || 1;
+    prev.c2 = { x: prev.p1.x - dir * l, y };
+  }
+  return { beziers };
 }
 
 export function draftBuste(m: Measurements): BusteResult {
   const warnings: DraftWarning[] = [];
   const values: ReportValue[] = [];
 
-  // ——— Valeurs dérivées d'encolure (méthode : cou/6+1, cou/16, arrondi au 1/2 cm)
-  const largeurEncolureBrute = METHOD.ENCOLURE_LARGEUR(m.tourCou);
-  const largeurEncolure = METHOD.ARRONDI(largeurEncolureBrute);
-  const profEncolureDosBrute = METHOD.ENCOLURE_PROFONDEUR_DOS(m.tourCou);
-  const profEncolureDos = METHOD.ARRONDI(profEncolureDosBrute);
+  // ——— Valeurs dérivées d'encolure — EXACTES, l'arrondi est d'affichage (p. 39-40)
+  const largeurEncolure = METHOD.ENCOLURE_LARGEUR(m.tourCou);
+  const profEncolureDos = METHOD.ENCOLURE_PROFONDEUR_DOS(m.tourCou);
   const profEncolureDevant = METHOD.ENCOLURE_PROFONDEUR_DEVANT(largeurEncolure);
 
-  // ——— Cadre commun (méthode : conventions)
+  // ——— Lignes horizontales du gabarit, établies par le dos (p. 33-34, ét. 1-8)
   const largeurPlanche = m.tourPoitrine / 2; // milieu dos x=0, milieu devant x=largeurPlanche
-  const xCote = m.tourPoitrine / 4; // couture de côté commune
-  const yTaille = profEncolureDos + m.longueurDos;
+  const yTaille = m.longueurDos; // C1 : la longueur dos se reporte depuis la ligne d'épaule (y=0)
+  const yEmmanchure = METHOD.LIGNE_EMMANCHURE(m.longueurDos); // C3 : mi-distance épaule ↔ taille
+  const yCarrure = METHOD.LIGNE_CARRURE(m.longueurDos); // C4 : longueur dos / 3
+  // C5 : largeurs ∓ 1 — les deux lignes de côté coïncident dans le repère miroir
+  const xCote = m.tourPoitrine / 4 - METHOD.DEMI_LARGEUR_AJUSTEMENT;
 
-  // ——— Répartition des pinces de taille (méthode : dos 7 / devant D8)
+  // ——— Répartition des pinces de taille (p. 54-58) — côté commun aux deux pièces
   const aAbsorberHaut = Math.max(0, (m.tourPoitrine - m.tourTaille) / 4);
   const aAbsorberBas = Math.max(0, (m.tourBassin - m.tourTaille) / 4);
-  const repDos = repartirPinces(aAbsorberHaut, "dos");
-  const repDevant = repartirPinces(aAbsorberHaut, "devant");
-  const excedent = repDos.excedent + repDevant.excedent;
-  if (excedent > 0) {
+  const rep = repartirPincesTaille(aAbsorberHaut);
+  if (rep.pinceSupplementaire) {
+    const excedent = rep.excedentDos + rep.excedentDevant;
     warnings.push({
       code: "pince-supplementaire",
-      message: `${excedent.toFixed(1)} cm à absorber au-delà des plafonds de pinces : la méthode prévoit une pince supplémentaire (non tracée en v1).`,
+      message:
+        excedent > 0
+          ? `${excedent.toFixed(1)} cm au-delà des plafonds de pinces : la méthode prévoit des pinces supplémentaires, non tracées en v1 (p. 58).`
+          : `Milieu dos au-delà de 1 cm (${rep.milieuDos.toFixed(1)} cm) : la méthode recommande une pince supplémentaire (p. 58).`,
     });
   }
 
-  // ═══════════════════ DEMI-DEVANT (D1-D9) — tracé d'abord car il fixe la ligne de poitrine
+  // ═══════════════════ DEMI-DOS (1-8)
+  const dos = new Draft("buste-dos", "Demi-dos");
+
+  // 1 — Cadre (p. 33-34)
+  const dessousBrasDos = dos.point("dessous-bras", pt(xCote, yEmmanchure), "Point de côté sur la ligne d'emmanchure");
+  dos.helper("ligne-emmanchure", pt(0, yEmmanchure), pt(xCote, yEmmanchure), "Ligne d'emmanchure", "p. 34 ét. 7");
+  dos.helper("ligne-carrure", pt(0, yCarrure), pt(xCote, yCarrure), "Ligne de carrure", "p. 34 ét. 8");
+  dos.helper("ligne-epaule", pt(0, 0), pt(xCote, 0), "Ligne d'épaule dos", "p. 33 ét. 2");
+
+  // 2 — Encolure dos (p. 39-40, C2 : nuque SOUS la ligne d'épaule)
+  const nuque = dos.point("nuque", pt(0, profEncolureDos), "Nuque : profondeur d'encolure sous la ligne d'épaule", "p. 40");
+  const snpDos = dos.point("snp-dos", pt(largeurEncolure, 0), "Point d'encolure côté cou, SUR la ligne d'épaule", "p. 39");
+
+  // 3 — Épaule dos à 18° (p. 41) ; pince d'épaule absorbée (ét. 4, p. 47) : longueur = épaule mesurée
+  const epauleDos = dos.point(
+    "epaule-dos",
+    polar(snpDos, METHOD.ANGLE_EPAULE_DOS, m.longueurEpaule),
+    "Extrémité d'épaule dos (18°)",
+    "p. 41",
+  );
+
+  // 5 — Points d'emmanchure dos (p. 42) : carrure, bissectrice du coin, platitude
+  const carrureDosPt = dos.point("carrure-dos", pt(m.carrureDos / 2, yCarrure), "Point de carrure dos", "p. 42 ét. 1");
+  const coinDos = pt(m.carrureDos / 2, yEmmanchure);
+  const bisDos = dos.point(
+    "bissectrice-dos",
+    pt(
+      coinDos.x + METHOD.BISSECTRICE_EMMANCHURE_DOS * Math.SQRT1_2,
+      coinDos.y - METHOD.BISSECTRICE_EMMANCHURE_DOS * Math.SQRT1_2,
+    ),
+    "Point de bissectrice (1,5 cm du coin carrure/emmanchure)",
+    "p. 42 ét. 2",
+  );
+  const platitudeDos = dos.point(
+    "platitude-dos",
+    pt(xCote - METHOD.PLATITUDE_EMMANCHURE, yEmmanchure),
+    "Platitude : arrivée plate à 1 cm du côté",
+    "p. 42 ét. 3",
+  );
+
+  // 7 — Pinces de taille dos (p. 54-58)
+  const tailleMilieuDos = dos.point("taille-milieu-dos", pt(rep.milieuDos, yTaille), "Milieu dos cintré à la taille", "p. 55");
+  const tailleCoteDos = dos.point("taille-cote-dos", pt(xCote - rep.cote, yTaille), "Côté dos cintré (pince de côté)", "p. 54");
+  if (rep.pinceDemiDos > 0) {
+    // axe à mi-distance entre le bras de la pince de côté et le milieu dos (cintré) — p. 54 ét. 5
+    const xAxe = (tailleMilieuDos.x + tailleCoteDos.x) / 2;
+    const apex = pt(xAxe, yEmmanchure - METHOD.RETRAIT_SOMMET_PINCE_DOS);
+    dos.dart({
+      id: "pince-demi-dos",
+      legs: [pt(xAxe - rep.pinceDemiDos / 2, yTaille), pt(xAxe + rep.pinceDemiDos / 2, yTaille)],
+      apex,
+      axis: [pt(xAxe, yTaille), apex],
+      value: rep.pinceDemiDos,
+      platitude: METHOD.PLATITUDE_PINCE(rep.pinceDemiDos),
+      label: `Pince demi-dos ${rep.pinceDemiDos.toFixed(1)} cm`,
+    });
+  }
+
+  // 6 + 8 — Contour dos : encolure → épaule → emmanchure → côté → taille → milieu dos
+  dos.curve(
+    "encolure-dos",
+    neckCurve(
+      nuque,
+      pt(1, 0), // platitude au milieu dos : tangente horizontale à la nuque (p. 63)
+      snpDos,
+      pt(Math.sin((METHOD.ANGLE_EPAULE_DOS * Math.PI) / 180), -Math.cos((METHOD.ANGLE_EPAULE_DOS * Math.PI) / 180)),
+    ),
+    "Encolure dos : platitude au milieu, raccord sur l'épaule",
+    "p. 39-40, 63",
+  );
+  dos.line("epaule-dos", snpDos, epauleDos, "Épaule dos à 18°", "p. 41");
+  dos.curve(
+    "emmanchure",
+    aplatirArrivee(
+      splineThrough([epauleDos, carrureDosPt, bisDos, platitudeDos, dessousBrasDos], METHOD.TENSION.emmanchureDos),
+    ),
+    "Emmanchure dos : épaule → carrure → bissectrice → platitude → côté",
+    "p. 42-44",
+  );
+  dos.line("cote-dos", dessousBrasDos, tailleCoteDos, "Couture de côté dos (droite)", "p. 54, 61");
+  dos.line("taille-dos", tailleCoteDos, tailleMilieuDos, "Ligne de taille dos");
+  dos.line("milieu-dos-bas", tailleMilieuDos, pt(0, yEmmanchure), "Milieu dos cintré depuis la ligne d'emmanchure", "p. 55");
+  dos.line("milieu-dos-haut", pt(0, yEmmanchure), nuque, "Milieu dos");
+
+  dos.mark({ id: "droit-fil-dos", at: pt(4, yEmmanchure + 4), to: pt(4, yTaille - 3), kind: "droit-fil", label: "DL" });
+  dos.lineRef("ref-milieu-dos", pt(0, 0), pt(0, yTaille), "Milieu dos", "p. 33 ét. 1");
+  dos.lineRef("ref-taille-dos", pt(0, yTaille), pt(xCote, yTaille), "Ligne de taille", "p. 33 ét. 3");
+  dos.label({ at: pt(8, yTaille - 6), text: "DOS", anchor: "middle" });
+
+  // ═══════════════════ DEMI-DEVANT (D1-D9)
   const devant = new Draft("buste-devant", "Demi-devant");
 
-  // D1 — Cadre devant : la longueur devant remonte depuis la taille
+  // D1 — Cadre (p. 35) : mêmes horizontales, ligne d'épaule propre au devant
+  const yEpauleDevant = yTaille - m.longueurDevant;
+  const dessousBras = devant.point("dessous-bras", pt(xCote, yEmmanchure), "Point de côté sur la ligne d'emmanchure");
+  devant.helper("ligne-emmanchure", pt(xCote, yEmmanchure), pt(largeurPlanche, yEmmanchure), "Ligne d'emmanchure", "p. 35");
+  devant.helper("ligne-carrure", pt(xCote, yCarrure), pt(largeurPlanche, yCarrure), "Ligne de carrure", "p. 35");
+  devant.helper(
+    "ligne-epaule-devant",
+    pt(xCote, yEpauleDevant),
+    pt(largeurPlanche, yEpauleDevant),
+    "Ligne d'épaule devant",
+    "p. 35 ét. 10",
+  );
+
+  // D2 — Encolure devant (p. 40)
   const snpDevant = devant.point(
     "snp-devant",
-    pt(largeurPlanche - largeurEncolure, yTaille - m.longueurDevant),
-    "Point d'encolure côté cou devant",
+    pt(largeurPlanche - largeurEncolure, yEpauleDevant),
+    "Point d'encolure côté cou devant, sur la ligne d'épaule devant",
+    "p. 40",
   );
   const gorge = devant.point(
     "gorge",
-    pt(largeurPlanche, snpDevant.y + profEncolureDevant),
-    "Point de gorge : profondeur d'encolure devant sous le point d'épaule",
+    pt(largeurPlanche, yEpauleDevant + profEncolureDevant),
+    "Point de gorge : profondeur d'encolure devant",
+    "p. 40",
   );
 
-  // D3 — Saillant : arc de rayon hauteur de poitrine depuis snp-devant
-  const xSaillant = largeurPlanche - m.ecartPoitrine / 2;
-  const dxS = snpDevant.x - xSaillant;
-  const dyS = Math.sqrt(Math.max(0, m.hauteurPoitrine ** 2 - dxS ** 2));
-  const saillant = devant.point("saillant", pt(xSaillant, snpDevant.y + dyS), "Saillant (pointe de poitrine)");
+  // D3 — Saillant (p. 50, C7) : hauteur de poitrine VERTICALE sous la ligne d'épaule devant
+  const yPoitrine = yEpauleDevant + m.hauteurPoitrine;
+  const saillant = devant.point(
+    "saillant",
+    pt(largeurPlanche - m.ecartPoitrine / 2, yPoitrine),
+    "Saillant : demi-écart depuis le milieu devant, sur la ligne de poitrine",
+    "p. 50",
+  );
+  devant.helper(
+    "ligne-poitrine",
+    pt(xCote, yPoitrine),
+    pt(largeurPlanche, yPoitrine),
+    "Ligne de poitrine (aide pince bretelle)",
+    "p. 50",
+  );
 
-  // D4 — Ligne de poitrine : horizontale par le saillant, commune aux deux pièces
-  const yPoitrine = saillant.y;
-  const dessousBras = devant.point("dessous-bras", pt(xCote, yPoitrine), "Coin côté / ligne de poitrine");
-  devant.helper("ligne-poitrine", pt(xCote, yPoitrine), pt(largeurPlanche, yPoitrine), "Ligne de poitrine");
-
-  // D5 — Épaule provisoire à 26° + pince bretelle ouverte par pivot autour du saillant
+  // D5 — Épaule devant à 26° + pince bretelle (p. 41, 49-53)
+  // Option pince d'épaule dos absorbée : épaule devant = épaule − 1 (p. 47)
+  const longueurEpauleDevant = m.longueurEpaule - METHOD.EMBU_EPAULE_DOS;
   const dirEpauleDevant = 180 - METHOD.ANGLE_EPAULE_DEVANT; // vers le côté, en descendant
-  const epauleProvisoire = polar(snpDevant, dirEpauleDevant, m.longueurEpaule);
+  const epauleProvisoire = polar(snpDevant, dirEpauleDevant, longueurEpauleDevant);
   const pb1 = devant.point(
     "pince-bretelle-1",
-    polar(snpDevant, dirEpauleDevant, m.longueurEpaule / 2),
+    polar(snpDevant, dirEpauleDevant, longueurEpauleDevant / 2),
     "Première jambe de la pince bretelle, au milieu de l'épaule",
+    "p. 52",
   );
+  const valeurBretelle = METHOD.PINCE_BRETELLE(m.tourPoitrine);
   const jambe = dist(pb1, saillant);
-  const valeurBretelle = METHOD.PINCE_BRETELLE;
-  // Ouverture par pivot : égalise les jambes et entraîne la seconde moitié d'épaule (cahier §4.4)
-  const theta = -2 * (Math.asin(valeurBretelle / 2 / jambe) * 180) / Math.PI;
-  const pb2 = devant.point("pince-bretelle-2", rotateAround(pb1, saillant, theta), "Seconde jambe, égalisée par le pivot");
+  // Ouverture par pivot autour du saillant : égalise les jambes et entraîne la
+  // seconde moitié d'épaule et le haut d'emmanchure (D6, choix v1 documenté)
+  const theta = (-2 * (Math.asin(valeurBretelle / 2 / jambe) * 180)) / Math.PI;
+  const pb2 = devant.point(
+    "pince-bretelle-2",
+    rotateAround(pb1, saillant, theta),
+    "Seconde jambe, égalisée sur la première",
+    "p. 52",
+  );
   const epauleDevant = devant.point(
     "epaule-devant",
     rotateAround(epauleProvisoire, saillant, theta),
     "Extrémité d'épaule devant, pince ouverte",
+    "p. 52",
   );
 
-  // D6 — Carrure devant : point pivoté avec la pince
-  const carrureDevant0 = pt(largeurPlanche - m.carrureDevant / 2, (epauleProvisoire.y + yPoitrine) / 2);
+  // D6 — Points d'emmanchure devant (p. 42) : carrure/bissectrice/platitude non pivotées
   const carrureDevantPt = devant.point(
     "carrure-devant",
-    rotateAround(carrureDevant0, saillant, theta),
-    "Point de carrure devant (pivoté avec la pince bretelle)",
+    pt(largeurPlanche - m.carrureDevant / 2, yCarrure),
+    "Point de carrure devant",
+    "p. 42 ét. 1",
   );
-  devant.helper("ligne-carrure-devant", pt(largeurPlanche, carrureDevant0.y), carrureDevantPt, "Carrure devant");
-
-  // D7 — Bissectrice devant : la courbe passe à 2,5 cm du coin
+  const coinDevant = pt(largeurPlanche - m.carrureDevant / 2, yEmmanchure);
   const bisDevant = devant.point(
     "bissectrice-devant",
     pt(
-      dessousBras.x + METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
-      dessousBras.y - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
+      coinDevant.x - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
+      coinDevant.y - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
     ),
-    "Point de bissectrice d'emmanchure devant (2,5 cm du coin)",
+    "Point de bissectrice (2,5 cm du coin)",
+    "p. 42 ét. 2",
+  );
+  const platitudeDevant = devant.point(
+    "platitude-devant",
+    pt(xCote + METHOD.PLATITUDE_EMMANCHURE, yEmmanchure),
+    "Platitude : arrivée plate à 1 cm du côté",
+    "p. 42 ét. 3",
   );
 
-  // D8 — Pince de taille devant : axe par le saillant, sommet 2 cm dessous
-  const apexDevant = pt(xSaillant, saillant.y + METHOD.RETRAIT_SOMMET_PINCE_DEVANT);
-  if (repDevant.pince > 0) {
+  // D8 — Pinces de taille devant (p. 54-55)
+  const tailleCoteDevant = devant.point(
+    "taille-cote-devant",
+    pt(xCote + rep.cote, yTaille),
+    "Côté devant cintré (pince de côté)",
+    "p. 54",
+  );
+  const tailleMilieuDevant = devant.point("taille-milieu-devant", pt(largeurPlanche, yTaille));
+  if (rep.pinceDevant > 0) {
+    const apex = pt(saillant.x, saillant.y + METHOD.RETRAIT_SOMMET_PINCE_DEVANT);
     devant.dart({
       id: "pince-taille-devant",
-      legs: [pt(xSaillant - repDevant.pince / 2, yTaille), pt(xSaillant + repDevant.pince / 2, yTaille)],
-      apex: apexDevant,
-      axis: [pt(xSaillant, yTaille), apexDevant],
-      value: repDevant.pince,
-      label: `Pince devant ${repDevant.pince.toFixed(1)} cm`,
+      legs: [pt(saillant.x - rep.pinceDevant / 2, yTaille), pt(saillant.x + rep.pinceDevant / 2, yTaille)],
+      apex,
+      axis: [pt(saillant.x, yTaille), apex],
+      value: rep.pinceDevant,
+      platitude: METHOD.PLATITUDE_PINCE(rep.pinceDevant),
+      label: `Pince devant ${rep.pinceDevant.toFixed(1)} cm`,
     });
   }
 
-  // D9 — Côté devant : cintrage de la reprise de côté
-  const tailleCoteDevant = devant.point("taille-cote-devant", pt(xCote + repDevant.cote, yTaille));
-  const tailleMilieuDevant = devant.point("taille-milieu-devant", pt(largeurPlanche, yTaille));
-
-  // Contour devant, ordonné et fermé : dessous-bras → côté → taille → milieu →
-  // encolure → épaule → bouche de pince → épaule → emmanchure → dessous-bras
-  devant.line("cote-devant", dessousBras, tailleCoteDevant, "Couture de côté devant");
+  // D7 + D9 — Contour devant
+  devant.line("cote-devant", dessousBras, tailleCoteDevant, "Couture de côté devant (droite)", "p. 54, 61");
   devant.line("taille-devant", tailleCoteDevant, tailleMilieuDevant, "Ligne de taille devant");
   devant.line("milieu-devant", tailleMilieuDevant, gorge, "Milieu devant");
   devant.curve(
     "encolure-devant",
-    neckCurve(
-      gorge,
-      pt(0, -1),
-      snpDevant,
-      pt(-Math.sin((METHOD.ANGLE_EPAULE_DEVANT * Math.PI) / 180), -Math.cos((METHOD.ANGLE_EPAULE_DEVANT * Math.PI) / 180)),
-    ),
-    "Encolure devant, perpendiculaire à l'épaule au raccord",
+    // suit la verticale d'encolure au départ du point d'épaule, tangente
+    // horizontale à la gorge (p. 63) — ici parcourue de la gorge vers l'épaule
+    neckCurve(gorge, pt(-1, 0), snpDevant, pt(0, -1)),
+    "Encolure devant : verticale à l'encolure, plate à la gorge",
+    "p. 40, 63",
   );
-  devant.line("epaule-devant-1", snpDevant, pb1, "Première moitié d'épaule devant (26°)");
-  devant.line("bouche-pince-bretelle", pb1, pb2, "Ouverture de la pince bretelle");
-  devant.line("epaule-devant-2", pb2, epauleDevant, "Seconde moitié d'épaule, pivotée");
+  devant.line("epaule-devant-1", snpDevant, pb1, "Première moitié d'épaule devant (26°)", "p. 41");
+  devant.line("bouche-pince-bretelle", pb1, pb2, "Ouverture de la pince bretelle", "p. 52");
+  devant.line("epaule-devant-2", pb2, epauleDevant, "Seconde moitié d'épaule, pivotée", "p. 52");
   devant.curve(
     "emmanchure",
-    splineThrough([epauleDevant, carrureDevantPt, bisDevant, dessousBras], METHOD.TENSION.emmanchureDevant),
-    "Emmanchure devant : épaule → carrure → bissectrice → dessous de bras",
+    aplatirArrivee(
+      splineThrough(
+        [epauleDevant, carrureDevantPt, bisDevant, platitudeDevant, dessousBras],
+        METHOD.TENSION.emmanchureDevant,
+      ),
+    ),
+    "Emmanchure devant : épaule → carrure → bissectrice → platitude → côté",
+    "p. 42-44",
   );
 
   devant.dart({
@@ -168,120 +326,38 @@ export function draftBuste(m: Measurements): BusteResult {
   devant.mark({ id: "saillant", at: saillant, kind: "point", label: "Saillant" });
   devant.mark({
     id: "droit-fil-devant",
-    at: pt(largeurPlanche - 4, yPoitrine + 3),
+    at: pt(largeurPlanche - 4, yPoitrine + 4),
     to: pt(largeurPlanche - 4, yTaille - 3),
     kind: "droit-fil",
     label: "DL",
   });
-  devant.lineRef("ref-milieu-devant", pt(largeurPlanche, snpDevant.y), pt(largeurPlanche, yTaille), "Milieu devant");
-  devant.lineRef("ref-taille-devant", pt(xCote, yTaille), pt(largeurPlanche, yTaille), "Ligne de taille");
-  devant.label({ at: pt(largeurPlanche - 8, yTaille - 8), text: "DEVANT", anchor: "middle" });
-
-  // ═══════════════════ DEMI-DOS (1-8)
-  const dos = new Draft("buste-dos", "Demi-dos");
-
-  // 1 — Cadre dos
-  const nuque = dos.point("nuque", pt(0, profEncolureDos), "Base de l'encolure au milieu dos");
-  const snpDos = dos.point("snp-dos", pt(largeurEncolure, 0), "Point d'encolure côté cou dos");
-
-  // 3 — Épaule dos à 18°
-  const epauleDos = dos.point(
-    "epaule-dos",
-    polar(snpDos, METHOD.ANGLE_EPAULE_DOS, m.longueurEpaule),
-    "Extrémité d'épaule dos (18°)",
+  devant.lineRef(
+    "ref-milieu-devant",
+    pt(largeurPlanche, yEpauleDevant),
+    pt(largeurPlanche, yTaille),
+    "Milieu devant",
+    "p. 35 ét. 10",
   );
+  devant.lineRef("ref-taille-devant", pt(xCote, yTaille), pt(largeurPlanche, yTaille), "Ligne de taille", "p. 33 ét. 3");
+  devant.label({ at: pt(largeurPlanche - 8, yTaille - 6), text: "DEVANT", anchor: "middle" });
 
-  // 4 — Ligne de poitrine (fixée par le devant) et dessous de bras
-  const dessousBrasDos = dos.point("dessous-bras", pt(xCote, yPoitrine), "Coin côté / ligne de poitrine");
-  dos.helper("ligne-poitrine", pt(0, yPoitrine), pt(xCote, yPoitrine), "Ligne de poitrine");
-
-  // 5 — Carrure dos
-  const carrureDosPt = dos.point(
-    "carrure-dos",
-    pt(m.carrureDos / 2, (epauleDos.y + yPoitrine) / 2),
-    "Point de carrure dos",
-  );
-  dos.helper("ligne-carrure-dos", pt(0, carrureDosPt.y), carrureDosPt, "Carrure dos");
-
-  // 6 — Bissectrice dos (1,5 cm du coin)
-  const bisDos = dos.point(
-    "bissectrice-dos",
-    pt(
-      dessousBrasDos.x - METHOD.BISSECTRICE_EMMANCHURE_DOS * Math.SQRT1_2,
-      dessousBrasDos.y - METHOD.BISSECTRICE_EMMANCHURE_DOS * Math.SQRT1_2,
-    ),
-    "Point de bissectrice d'emmanchure dos (1,5 cm du coin)",
-  );
-
-  // 7 — Pinces de taille dos : milieu dos cintré + pince demi-dos
-  const tailleMilieuDos = dos.point("taille-milieu-dos", pt(repDos.milieuDos, yTaille), "Milieu dos cintré à la taille");
-  const tailleCoteDos = dos.point("taille-cote-dos", pt(xCote - repDos.cote, yTaille));
-  const xAxePinceDos = (tailleMilieuDos.x + tailleCoteDos.x) / 2;
-  const apexDos = pt(xAxePinceDos, yPoitrine - METHOD.RETRAIT_SOMMET_PINCE_DOS);
-  if (repDos.pince > 0) {
-    dos.dart({
-      id: "pince-taille-dos",
-      legs: [pt(xAxePinceDos - repDos.pince / 2, yTaille), pt(xAxePinceDos + repDos.pince / 2, yTaille)],
-      apex: apexDos,
-      axis: [pt(xAxePinceDos, yTaille), apexDos],
-      value: repDos.pince,
-      label: `Pince dos ${repDos.pince.toFixed(1)} cm`,
-    });
-  }
-
-  // Contour dos : nuque → encolure → épaule → emmanchure → côté → taille → milieu dos
-  dos.curve(
-    "encolure-dos",
-    neckCurve(
-      nuque,
-      pt(1, 0),
-      snpDos,
-      pt(Math.sin((METHOD.ANGLE_EPAULE_DOS * Math.PI) / 180), -Math.cos((METHOD.ANGLE_EPAULE_DOS * Math.PI) / 180)),
-    ),
-    "Encolure dos, tangente horizontale au milieu",
-  );
-  dos.line("epaule-dos", snpDos, epauleDos, "Épaule dos à 18°");
-  dos.curve(
-    "emmanchure",
-    splineThrough([epauleDos, carrureDosPt, bisDos, dessousBrasDos], METHOD.TENSION.emmanchureDos),
-    "Emmanchure dos : épaule → carrure → bissectrice → dessous de bras",
-  );
-  dos.line("cote-dos", dessousBrasDos, tailleCoteDos, "Couture de côté dos");
-  dos.line("taille-dos", tailleCoteDos, tailleMilieuDos, "Ligne de taille dos");
-  dos.line("milieu-dos-bas", tailleMilieuDos, pt(0, yPoitrine), "Milieu dos cintré sous la poitrine");
-  dos.line("milieu-dos-haut", pt(0, yPoitrine), nuque, "Milieu dos");
-
-  dos.mark({
-    id: "droit-fil-dos",
-    at: pt(4, yPoitrine + 3),
-    to: pt(4, yTaille - 3),
-    kind: "droit-fil",
-    label: "DL",
-  });
-  dos.lineRef("ref-milieu-dos", pt(0, 0), pt(0, yTaille), "Milieu dos");
-  dos.lineRef("ref-taille-dos", pt(0, yTaille), pt(xCote, yTaille), "Ligne de taille");
-  dos.label({ at: pt(8, yTaille - 8), text: "DOS", anchor: "middle" });
-
-  // ═══════════════════ Rapport de valeurs calculées
+  // ═══════════════════ Rapport de valeurs calculées (exactes ; l'arrondi est d'affichage)
   const dosPiece = dos.toPiece();
   const devantPiece = devant.toPiece();
   const emmanchureDos = curveLength(dosPiece.curves["emmanchure"]);
   const emmanchureDevant = curveLength(devantPiece.curves["emmanchure"]);
 
   values.push(
-    { key: "largeurEncolure", label: "Largeur d'encolure (cou/6 + 1)", value: largeurEncolureBrute, unit: "cm" },
-    { key: "largeurEncolureArrondie", label: "Largeur d'encolure arrondie", value: largeurEncolure, unit: "cm" },
-    { key: "profEncolureDos", label: "Profondeur d'encolure dos (cou/16)", value: profEncolureDosBrute, unit: "cm" },
-    { key: "profEncolureDosArrondie", label: "Profondeur d'encolure dos arrondie", value: profEncolureDos, unit: "cm" },
-    { key: "profEncolureDevant", label: "Profondeur d'encolure devant", value: profEncolureDevant, unit: "cm" },
-    { key: "pinceBretelle", label: "Valeur de pince bretelle", value: valeurBretelle, unit: "cm" },
-    { key: "aAbsorberHaut", label: "À absorber à la taille (haut, par quart)", value: aAbsorberHaut, unit: "cm" },
-    { key: "aAbsorberBas", label: "À absorber à la taille (bas, par quart)", value: aAbsorberBas, unit: "cm" },
-    { key: "coteDos", label: "Reprise côté dos", value: repDos.cote, unit: "cm" },
-    { key: "pinceDos", label: "Pince demi-dos", value: repDos.pince, unit: "cm" },
-    { key: "milieuDos", label: "Reprise milieu dos", value: repDos.milieuDos, unit: "cm" },
-    { key: "coteDevant", label: "Reprise côté devant", value: repDevant.cote, unit: "cm" },
-    { key: "pinceDevant", label: "Pince devant", value: repDevant.pince, unit: "cm" },
+    { key: "largeurEncolure", label: "Largeur d'encolure (cou/6 + 1)", value: largeurEncolure, unit: "cm", bookRef: "p. 39", arrondi: true },
+    { key: "profEncolureDos", label: "Profondeur d'encolure dos (cou/16)", value: profEncolureDos, unit: "cm", bookRef: "p. 40", arrondi: true },
+    { key: "profEncolureDevant", label: "Profondeur d'encolure devant (largeur + 2)", value: profEncolureDevant, unit: "cm", bookRef: "p. 40", arrondi: true },
+    { key: "pinceBretelle", label: "Pince bretelle (poitrine/20 + 1)", value: valeurBretelle, unit: "cm", bookRef: "p. 52" },
+    { key: "aAbsorberHaut", label: "À absorber à la taille (haut, par quart)", value: aAbsorberHaut, unit: "cm", bookRef: "p. 56" },
+    { key: "aAbsorberBas", label: "À absorber à la taille (bas, par quart)", value: aAbsorberBas, unit: "cm", bookRef: "p. 56" },
+    { key: "cote", label: "Pince de côté (dos = devant)", value: rep.cote, unit: "cm", bookRef: "p. 54" },
+    { key: "pinceDevant", label: "Pince du devant", value: rep.pinceDevant, unit: "cm", bookRef: "p. 54" },
+    { key: "pinceDemiDos", label: "Pince du demi-dos", value: rep.pinceDemiDos, unit: "cm", bookRef: "p. 54" },
+    { key: "milieuDos", label: "Reprise milieu dos", value: rep.milieuDos, unit: "cm", bookRef: "p. 55" },
     { key: "emmanchureDos", label: "Longueur d'emmanchure dos (mesurée)", value: emmanchureDos, unit: "cm" },
     { key: "emmanchureDevant", label: "Longueur d'emmanchure devant (mesurée)", value: emmanchureDevant, unit: "cm" },
   );

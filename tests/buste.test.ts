@@ -1,14 +1,16 @@
 /**
- * Golden tests : les exemples chiffrés du livre (cahier §4.5.1).
- * Tour de cou 38 → largeur d'encolure 7,33 (arrondie 7,5), profondeur dos 2,38
- * (arrondie 2,5), profondeur devant 9,5. Poitrine 88 / taille 68 / bassin 92 →
- * 5 cm à absorber par quart en haut, 6 cm en bas.
+ * Golden tests : les exemples chiffrés du livre (cahier §4.5.1, transcription
+ * v2 de docs/methode/buste.md). Tour de cou 38 → largeur d'encolure 7,33,
+ * profondeur dos 2,375, profondeur devant 9,33 (valeurs EXACTES, l'arrondi
+ * 7,5/2,5/9,5 est d'affichage). Poitrine 88 → pince bretelle 5,4.
+ * Poitrine 88 / taille 68 / bassin 92 → U = 5 en haut, 6 en bas ; répartition
+ * normative p. 57 : côté 2, devant 3, demi-dos 2, milieu dos 1.
  */
 
 import { describe, it, expect } from "vitest";
 import { draftBuste, reportValue } from "../src/engine/pieces/buste";
 import { DEMO_MEASUREMENTS, checkCoherence, validateBounds } from "../src/engine/measurements";
-import { repartirPinces, METHOD } from "../src/engine/method";
+import { repartirPincesTaille, METHOD } from "../src/engine/method";
 import { generate } from "../src/engine/generate";
 import { dist } from "../src/engine/geometry/point";
 import { curveLength } from "../src/engine/geometry/curve";
@@ -23,25 +25,40 @@ describe("profil de démonstration", () => {
   });
 });
 
-describe("golden : encolure (tour de cou 38)", () => {
+describe("golden : encolure (tour de cou 38, p. 39-40)", () => {
   const { report } = draftBuste(demo);
 
-  it("largeur d'encolure = cou/6 + 1 = 7,33, arrondie 7,5", () => {
-    expect(reportValue(report, "largeurEncolure")).toBeCloseTo(7.33, 2);
-    expect(reportValue(report, "largeurEncolureArrondie")).toBe(7.5);
+  it("largeur d'encolure = cou/6 + 1 = 7,33 exact (affiché 7,5)", () => {
+    expect(reportValue(report, "largeurEncolure")).toBeCloseTo(38 / 6 + 1, 6);
+    expect(METHOD.ARRONDI_AFFICHAGE(reportValue(report, "largeurEncolure"))).toBe(7.5);
   });
 
-  it("profondeur d'encolure dos = cou/16 = 2,38, arrondie 2,5", () => {
-    expect(reportValue(report, "profEncolureDos")).toBeCloseTo(2.38, 2);
-    expect(reportValue(report, "profEncolureDosArrondie")).toBe(2.5);
+  it("profondeur d'encolure dos = cou/16 = 2,375 exact (affiché 2,5)", () => {
+    expect(reportValue(report, "profEncolureDos")).toBeCloseTo(2.375, 6);
+    expect(METHOD.ARRONDI_AFFICHAGE(reportValue(report, "profEncolureDos"))).toBe(2.5);
   });
 
-  it("profondeur d'encolure devant = 9,5", () => {
-    expect(reportValue(report, "profEncolureDevant")).toBe(9.5);
+  it("profondeur d'encolure devant = largeur exacte + 2 = 9,33 (affiché 9,5)", () => {
+    expect(reportValue(report, "profEncolureDevant")).toBeCloseTo(38 / 6 + 3, 6);
+    expect(METHOD.ARRONDI_AFFICHAGE(reportValue(report, "profEncolureDevant"))).toBe(9.5);
   });
 });
 
-describe("golden : pinces de taille (poitrine 88 / taille 68 / bassin 92)", () => {
+describe("golden : pince bretelle (poitrine 88, p. 52)", () => {
+  const { report, devant } = draftBuste(demo);
+
+  it("valeur = poitrine/20 + 1 = 5,4", () => {
+    expect(reportValue(report, "pinceBretelle")).toBeCloseTo(5.4, 6);
+  });
+
+  it("jambes égalisées sur la première, bouche = valeur", () => {
+    const pb = devant.darts.find((d) => d.id === "pince-bretelle")!;
+    expect(dist(pb.legs[0], pb.apex)).toBeCloseTo(dist(pb.legs[1], pb.apex), 6);
+    expect(dist(pb.legs[0], pb.legs[1])).toBeCloseTo(5.4, 3);
+  });
+});
+
+describe("golden : pinces de taille (88/68/92, p. 54-58)", () => {
   const { report } = draftBuste(demo);
 
   it("5 cm à absorber par quart en haut, 6 cm en bas", () => {
@@ -49,62 +66,68 @@ describe("golden : pinces de taille (poitrine 88 / taille 68 / bassin 92)", () =
     expect(reportValue(report, "aAbsorberBas")).toBe(6);
   });
 
-  it("répartition dos : côté 2 + pince demi-dos 2 + milieu dos 1 (plafonds respectés)", () => {
-    expect(reportValue(report, "coteDos")).toBe(2);
-    expect(reportValue(report, "pinceDos")).toBe(2);
+  it("répartition normative (p. 57, fig. 3) : côté 2, devant 3, demi-dos 2, milieu dos 1", () => {
+    expect(reportValue(report, "cote")).toBe(2);
+    expect(reportValue(report, "pinceDevant")).toBe(3);
+    expect(reportValue(report, "pinceDemiDos")).toBe(2);
     expect(reportValue(report, "milieuDos")).toBe(1);
   });
 
-  it("répartition devant : côté 2 + pince devant 3", () => {
-    expect(reportValue(report, "coteDevant")).toBe(2);
-    expect(reportValue(report, "pinceDevant")).toBe(3);
-  });
-
-  it("aucun excédent : pas d'avertissement de pince supplémentaire", () => {
+  it("aucun avertissement de pince supplémentaire", () => {
     expect(report.warnings).toEqual([]);
   });
 });
 
-describe("golden : points de construction du profil démo", () => {
+describe("golden : points de construction du profil démo (v2)", () => {
   const { dos, devant } = draftBuste(demo);
-  const yTaille = 2.5 + demo.longueurDos; // profondeur encolure dos arrondie + longueur dos
+  const yTaille = demo.longueurDos; // C1 : longueur dos depuis la ligne d'épaule
+  const xCote = demo.tourPoitrine / 4 - 1; // C5 : largeur dos = poitrine/4 − 1
 
-  it("dos : nuque, point d'encolure, extrémité d'épaule à 18°", () => {
+  it("dos : nuque SOUS la ligne d'épaule, point d'encolure SUR la ligne (C2)", () => {
     expect(dos.points["nuque"].x).toBeCloseTo(0);
-    expect(dos.points["nuque"].y).toBeCloseTo(2.5);
-    expect(dos.points["snp-dos"].x).toBeCloseTo(7.5);
+    expect(dos.points["nuque"].y).toBeCloseTo(2.375, 6);
+    expect(dos.points["snp-dos"].x).toBeCloseTo(38 / 6 + 1, 6);
     expect(dos.points["snp-dos"].y).toBeCloseTo(0);
-    // épaule 13 cm à 18° : (7,5 + 13·cos18, 13·sin18)
-    expect(dos.points["epaule-dos"].x).toBeCloseTo(7.5 + 13 * Math.cos((18 * Math.PI) / 180), 3);
+  });
+
+  it("dos : extrémité d'épaule à 18°, longueur épaule mesurée", () => {
+    const lEnc = 38 / 6 + 1;
+    expect(dos.points["epaule-dos"].x).toBeCloseTo(lEnc + 13 * Math.cos((18 * Math.PI) / 180), 3);
     expect(dos.points["epaule-dos"].y).toBeCloseTo(13 * Math.sin((18 * Math.PI) / 180), 3);
   });
 
-  it("devant : saillant à écart/2 du milieu, à hauteur de poitrine du point d'encolure", () => {
+  it("lignes du gabarit : emmanchure = longueur dos/2, carrure = longueur dos/3 (C3, C4)", () => {
+    expect(dos.points["dessous-bras"].y).toBeCloseTo(demo.longueurDos / 2, 6);
+    expect(dos.points["carrure-dos"].y).toBeCloseTo(demo.longueurDos / 3, 6);
+    expect(dos.points["carrure-dos"].x).toBeCloseTo(demo.carrureDos / 2, 6);
+  });
+
+  it("lignes de côté dos et devant coïncident à poitrine/4 − 1 (C5)", () => {
+    expect(dos.points["dessous-bras"].x).toBeCloseTo(xCote, 6);
+    expect(devant.points["dessous-bras"].x).toBeCloseTo(xCote, 6);
+    expect(devant.points["dessous-bras"].y).toBeCloseTo(dos.points["dessous-bras"].y, 6);
+  });
+
+  it("devant : saillant à écart/2 du milieu, hauteur de poitrine VERTICALE (C7)", () => {
     const saillant = devant.points["saillant"];
-    expect(saillant.x).toBeCloseTo(demo.tourPoitrine / 2 - demo.ecartPoitrine / 2);
-    expect(dist(devant.points["snp-devant"], saillant)).toBeCloseTo(demo.hauteurPoitrine, 3);
+    const yEpauleDevant = yTaille - demo.longueurDevant;
+    expect(saillant.x).toBeCloseTo(demo.tourPoitrine / 2 - demo.ecartPoitrine / 2, 6);
+    expect(saillant.y).toBeCloseTo(yEpauleDevant + demo.hauteurPoitrine, 6);
   });
 
-  it("la ligne de poitrine est commune aux deux pièces", () => {
-    expect(dos.points["dessous-bras"].y).toBeCloseTo(devant.points["dessous-bras"].y, 6);
-    expect(dos.points["dessous-bras"].x).toBeCloseTo(demo.tourPoitrine / 4);
-  });
-
-  it("largeur à la taille après pinces = tour de taille / 4 (17 cm) sur chaque pièce", () => {
-    const dosLargeur =
-      dos.points["taille-cote-dos"].x - dos.points["taille-milieu-dos"].x - 2; // pince demi-dos 2
+  it("largeur à la taille après pinces : dos = taille/4 − 1, devant = taille/4 + 1", () => {
+    const dosLargeur = dos.points["taille-cote-dos"].x - dos.points["taille-milieu-dos"].x - 2; // pince demi-dos
     const devantLargeur =
-      devant.points["taille-milieu-devant"].x - devant.points["taille-cote-devant"].x - 3; // pince devant 3
-    expect(dosLargeur).toBeCloseTo(demo.tourTaille / 4, 6);
-    expect(devantLargeur).toBeCloseTo(demo.tourTaille / 4, 6);
+      devant.points["taille-milieu-devant"].x - devant.points["taille-cote-devant"].x - 3; // pince devant
+    expect(dosLargeur).toBeCloseTo(demo.tourTaille / 4 - 1, 6);
+    expect(devantLargeur).toBeCloseTo(demo.tourTaille / 4 + 1, 6);
     expect(dos.points["taille-milieu-dos"].y).toBeCloseTo(yTaille);
   });
 
-  it("pince bretelle : jambes égalisées, valeur de la méthode", () => {
-    const pb = devant.darts.find((d) => d.id === "pince-bretelle")!;
-    expect(pb.value).toBe(METHOD.PINCE_BRETELLE);
-    expect(dist(pb.legs[0], pb.apex)).toBeCloseTo(dist(pb.legs[1], pb.apex), 6);
-    expect(dist(pb.legs[0], pb.legs[1])).toBeCloseTo(METHOD.PINCE_BRETELLE, 3);
+  it("épaule devant = épaule − 1 (embu de la pince d'épaule dos absorbée, C9)", () => {
+    const l1 = dist(devant.points["snp-devant"], devant.points["pince-bretelle-1"]);
+    const l2 = dist(devant.points["pince-bretelle-2"], devant.points["epaule-devant"]);
+    expect(l1 + l2).toBeCloseTo(demo.longueurEpaule - METHOD.EMBU_EPAULE_DOS, 6);
   });
 
   it("contours fermés", () => {
@@ -113,37 +136,40 @@ describe("golden : points de construction du profil démo", () => {
   });
 });
 
-describe("répartition des pinces : cas extrêmes (fonction pure)", () => {
-  it("rien à absorber → tout à zéro", () => {
-    expect(repartirPinces(0, "dos")).toEqual({ cote: 0, pince: 0, milieuDos: 0, excedent: 0 });
-    expect(repartirPinces(0, "devant")).toEqual({ cote: 0, pince: 0, milieuDos: 0, excedent: 0 });
+describe("répartition des pinces de taille : cas extrêmes (fonction pure)", () => {
+  it("rien à absorber → tout à zéro, pas de pince supplémentaire", () => {
+    const r = repartirPincesTaille(0);
+    expect(r).toMatchObject({ cote: 0, pinceDevant: 0, pinceDemiDos: 0, milieuDos: 0 });
+    expect(r.pinceSupplementaire).toBe(false);
   });
 
-  it("forte différence poitrine/taille : plafonds saturés, excédent signalé", () => {
-    const dos = repartirPinces(10, "dos");
-    expect(dos.cote).toBe(METHOD.PLAFOND_COTE_PAR_PIECE);
-    expect(dos.pince).toBe(METHOD.PLAFOND_PINCE_DEMI_DOS);
-    expect(dos.milieuDos).toBe(METHOD.PLAFOND_MILIEU_DOS);
-    expect(dos.excedent).toBeCloseTo(4);
-
-    const devant = repartirPinces(10, "devant");
-    expect(devant.cote).toBe(METHOD.PLAFOND_COTE_PAR_PIECE);
-    expect(devant.pince).toBe(METHOD.PLAFOND_PINCE_DEVANT);
-    expect(devant.milieuDos).toBe(0);
-    expect(devant.excedent).toBeCloseTo(5);
+  it("U = 5 : exemple normatif du livre (p. 57)", () => {
+    const r = repartirPincesTaille(5);
+    expect(r.cote).toBe(2);
+    expect(r.pinceDevant).toBe(3);
+    expect(r.pinceDemiDos).toBe(2);
+    expect(r.milieuDos).toBe(1);
+    expect(r.pinceSupplementaire).toBe(false);
   });
 
-  it("la somme répartie + excédent = valeur à absorber", () => {
-    for (const v of [0, 1.5, 3, 5, 6.5, 9, 12]) {
-      for (const piece of ["dos", "devant"] as const) {
-        const r = repartirPinces(v, piece);
-        expect(r.cote + r.pince + r.milieuDos + r.excedent).toBeCloseTo(v, 9);
-      }
+  it("U = 8 : côté saturé à 4, pince supplémentaire demandée", () => {
+    const r = repartirPincesTaille(8);
+    expect(r.cote).toBe(METHOD.PLAFOND_COTE);
+    expect(r.pinceDevant).toBe(METHOD.PLAFOND_PINCE_DEVANT);
+    expect(r.excedentDevant).toBeCloseTo(1);
+    expect(r.pinceSupplementaire).toBe(true);
+  });
+
+  it("la somme répartie + excédents = U de chaque côté de la planche", () => {
+    for (const U of [0, 1.5, 3, 5, 6.5, 8, 12]) {
+      const r = repartirPincesTaille(U);
+      expect(r.cote + r.pinceDevant + r.excedentDevant).toBeCloseTo(U, 9);
+      expect(r.cote + r.pinceDemiDos + r.milieuDos + r.excedentDos).toBeCloseTo(U, 9);
     }
   });
 
-  it("excédent du profil démo poussé : avertissement structuré émis", () => {
-    const { report } = draftBuste({ ...demo, tourTaille: 46 });
+  it("profil serré : avertissement structuré émis par le moteur", () => {
+    const { report } = draftBuste({ ...demo, tourTaille: 56 });
     expect(report.warnings.some((w) => w.code === "pince-supplementaire")).toBe(true);
   });
 });
@@ -155,8 +181,8 @@ describe("dépendance inter-pièces : emmanchure mesurée sur le tracé", () => 
     const devant = pattern.pieces.find((p) => p.id === "buste-devant")!;
     const attendu = curveLength(dos.curves["emmanchure"]) + curveLength(devant.curves["emmanchure"]);
     expect(pattern.interPieces.longueurEmmanchureTotale).toBeCloseTo(attendu, 6);
-    // ordre de grandeur anatomique : une emmanchure de buste 88 fait 38-48 cm
+    // ordre de grandeur anatomique pour une poitrine 88
     expect(attendu).toBeGreaterThan(30);
-    expect(attendu).toBeLessThan(55);
+    expect(attendu).toBeLessThan(50);
   });
 });
