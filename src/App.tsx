@@ -12,15 +12,28 @@ type Onglet = "mesures" | "profils" | "valeurs";
 
 export default function App() {
   const measurements = useStore((s) => s.measurements);
+  const generatedMeasurements = useStore((s) => s.generatedMeasurements);
+  const generer = useStore((s) => s.generer);
   const modeConstruction = useStore((s) => s.modeConstruction);
   const toggleModeConstruction = useStore((s) => s.toggleModeConstruction);
   const [onglet, setOnglet] = useState<Onglet>("mesures");
 
+  // validation en continu sur le BROUILLON (retour immédiat dans le formulaire)
   const errors = useMemo(() => validateBounds(measurements), [measurements]);
   const warnings = useMemo(() => checkCoherence(measurements), [measurements]);
+
+  // le patron n'est régénéré qu'au clic sur « Générer » (jeu de mesures figé)
   const pattern = useMemo(
-    () => (errors.length === 0 ? generate(measurements) : null),
-    [errors, measurements],
+    () =>
+      generatedMeasurements && validateBounds(generatedMeasurements).length === 0
+        ? generate(generatedMeasurements)
+        : null,
+    [generatedMeasurements],
+  );
+
+  const dirty = useMemo(
+    () => JSON.stringify(measurements) !== JSON.stringify(generatedMeasurements),
+    [measurements, generatedMeasurements],
   );
 
   return (
@@ -39,7 +52,7 @@ export default function App() {
           </label>
           <button
             disabled={!pattern}
-            onClick={() => pattern && downloadSvg(pattern.pieces, measurements)}
+            onClick={() => pattern && generatedMeasurements && downloadSvg(pattern.pieces, generatedMeasurements)}
             className="rounded border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-40"
           >
             Exporter SVG 1:1
@@ -47,10 +60,10 @@ export default function App() {
           <button
             disabled={!pattern}
             onClick={async () => {
-              if (!pattern) return;
+              if (!pattern || !generatedMeasurements) return;
               // import dynamique : jsPDF (~350 ko) n'est chargé qu'à la demande
               const { downloadPdf } = await import("./render/export-pdf");
-              downloadPdf(pattern.pieces, measurements);
+              downloadPdf(pattern.pieces, generatedMeasurements);
             }}
             className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-40"
           >
@@ -61,6 +74,24 @@ export default function App() {
 
       <div className="flex min-h-0 flex-1">
         <aside className="flex w-80 shrink-0 flex-col border-r border-gray-200 bg-gray-50">
+          <div className="border-b border-gray-200 bg-white p-3">
+            <button
+              disabled={errors.length > 0 || !dirty}
+              onClick={generer}
+              className="w-full rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Générer le patron
+            </button>
+            {errors.length > 0 ? (
+              <p className="mt-1.5 text-xs text-red-600">Corriger les mesures en erreur avant de générer.</p>
+            ) : dirty ? (
+              <p className="mt-1.5 text-xs text-amber-700">
+                Mesures modifiées : le patron affiché ne les reflète pas encore.
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xs text-gray-400">Le patron est à jour.</p>
+            )}
+          </div>
           <nav className="flex border-b border-gray-200 text-sm">
             {(
               [
@@ -87,17 +118,24 @@ export default function App() {
               (pattern ? (
                 <ValuesPanel report={pattern.report} />
               ) : (
-                <p className="text-sm text-gray-500">Corriger les mesures pour générer le patron.</p>
+                <p className="text-sm text-gray-500">Générer le patron pour voir les valeurs calculées.</p>
               ))}
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1">
+        <main className="relative min-w-0 flex-1">
           {pattern ? (
-            <Viewer pattern={pattern} construction={modeConstruction} />
+            <>
+              <Viewer pattern={pattern} construction={modeConstruction} />
+              {dirty && (
+                <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 shadow-sm">
+                  Patron généré avec les mesures précédentes — cliquer « Générer le patron »
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex h-full items-center justify-center text-gray-400">
-              Mesures invalides — voir le formulaire
+              Saisir des mesures valides puis cliquer « Générer le patron »
             </div>
           )}
         </main>
