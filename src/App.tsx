@@ -40,9 +40,21 @@ export default function App() {
           <button
             disabled={!pattern}
             onClick={() => pattern && downloadSvg(pattern.pieces, measurements)}
-            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-40"
+            className="rounded border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-40"
           >
             Exporter SVG 1:1
+          </button>
+          <button
+            disabled={!pattern}
+            onClick={async () => {
+              if (!pattern) return;
+              // import dynamique : jsPDF (~350 ko) n'est chargé qu'à la demande
+              const { downloadPdf } = await import("./render/export-pdf");
+              downloadPdf(pattern.pieces, measurements);
+            }}
+            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-40"
+          >
+            Exporter PDF A4
           </button>
         </div>
       </header>
