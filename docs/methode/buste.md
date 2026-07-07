@@ -126,6 +126,23 @@ Exemple longueur dos 40 : emmanchure y = 20, carrure y = 13,33.
    paramétrable dans le moteur, la valeur de bissectrice restant le point de
    contrôle ajustable (p. 42, « À noter » : le tracé peut modifier la valeur
    posée sur la bissectrice, pas les autres points).
+   **Allure du bas de courbe (planches p. 42-44 + coup de perroquet, validé
+   livre en main 2026-07-07)** : la courbe **coupe la bissectrice à angle
+   droit** — au point de bissectrice, la tangente est à 45° de l'horizontale,
+   en descente vers le côté — puis rejoint le point de côté en **un seul
+   balayage à courbure continue**, comme le perroquet posé sur le coin :
+   aucune rupture (ni palier, ni segment à la règle) entre la bissectrice et
+   le coin du côté. La **platitude de 1 cm est un repère de queue de
+   perroquet** : la courbe y devient quasi horizontale et vient lécher la
+   ligne d'emmanchure (écart ≲ 1 mm, un trait de crayon), l'arrivée au point
+   de côté étant exactement horizontale. Le moteur trace : spline épaule →
+   carrure → bissectrice (tangente 45° imposée), puis **une seule cubique**
+   bissectrice → dessous-bras, raccordée C1 (même poignée de part et d'autre
+   de la bissectrice, bornée par la valeur de bissectrice pour ne jamais
+   passer sous la ligne). (Historique : la v2 à tangentes déduites des voisins
+   plongeait sous la ligne puis la longeait — angle écrasé ; l'assemblage
+   arc + segment droit créait des sauts de courbure perçus comme une
+   segmentation.)
 7. **Pinces de taille dos** (p. 54-58) — voir §Répartition ci-dessous.
    - **Pince de côté dos** : même valeur que la pince de côté devant (C8).
      Partie haute = **droite** de `dessous-bras` au repère de platitude de
@@ -205,7 +222,11 @@ D6. **Points d'emmanchure devant** (p. 42). Point de carrure : x' =
    bougent pas ; la spline lisse le raccord.**
 D7. **Emmanchure devant**. Spline : extrémité d'épaule (pivotée) → carrure →
    bissectrice (2,5) → platitude → `dessous-bras` = (poitrine/4 + 1 en local,
-   y emmanchure).
+   y emmanchure). Même allure du bas de courbe que le dos (§6) : tangente à
+   45° au point de bissectrice (courbe perpendiculaire à la bissectrice), puis
+   un seul balayage à courbure continue jusqu'au point de côté, la queue
+   léchant la ligne au repère de platitude. Le virage devant est plus ample
+   que le dos par construction (bissectrice à 2,5 cm, plus loin du côté).
 D8. **Pinces de taille devant** (p. 54-55).
    - **Pince du devant** : axe vertical **passant par le saillant** (p. 54,
      ét. 1 : tracée depuis le saillant, valeur répartie de façon équilibrée

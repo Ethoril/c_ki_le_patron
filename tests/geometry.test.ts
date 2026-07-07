@@ -108,6 +108,32 @@ describe("courbes", () => {
     expect(c.beziers[1].p1).toEqual(pts[2]);
   });
 
+  it("splineThrough : tangente imposée = direction respectée, amplitude Catmull-Rom conservée", () => {
+    const pts = [pt(0, 0), pt(4, 3), pt(8, 1), pt(12, 5)];
+    const libre = splineThrough(pts);
+    const c = splineThrough(pts, 0, [undefined, pt(1, 1), undefined, undefined]);
+    // passe toujours par tous les points imposés
+    expect(c.beziers[0].p1).toEqual(pts[1]);
+    expect(c.beziers[1].p0).toEqual(pts[1]);
+    // direction de la tangente au point 1 : 45°
+    const h = { x: c.beziers[1].c1.x - pts[1].x, y: c.beziers[1].c1.y - pts[1].y };
+    expect(h.y / h.x).toBeCloseTo(1, 9);
+    // amplitude inchangée par rapport à la tangente Catmull-Rom implicite
+    const hLibre = { x: libre.beziers[1].c1.x - pts[1].x, y: libre.beziers[1].c1.y - pts[1].y };
+    expect(Math.hypot(h.x, h.y)).toBeCloseTo(Math.hypot(hLibre.x, hLibre.y), 9);
+    // la poignée d'arrivée du segment précédent suit la même tangente (continuité C1)
+    const g = { x: pts[1].x - c.beziers[0].c2.x, y: pts[1].y - c.beziers[0].c2.y };
+    expect(g.y / g.x).toBeCloseTo(1, 9);
+    // les points sans consigne gardent le tracé Catmull-Rom
+    expect(c.beziers[2].c2).toEqual(libre.beziers[2].c2);
+  });
+
+  it("splineThrough : tangente imposée nulle → erreur explicite", () => {
+    expect(() => splineThrough([pt(0, 0), pt(4, 3), pt(8, 1)], 0, [undefined, pt(0, 0), undefined])).toThrow(
+      /tangente imposée nulle/,
+    );
+  });
+
   it("curveLength d'une spline alignée = distance", () => {
     const c = splineThrough([pt(0, 0), pt(5, 0), pt(10, 0)]);
     expect(curveLength(c)).toBeCloseTo(10, 3);

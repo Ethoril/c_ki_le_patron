@@ -10,7 +10,7 @@ import type { Measurements } from "../src/engine/measurements";
 import { validateBounds } from "../src/engine/measurements";
 import { METHOD } from "../src/engine/method";
 import { dist } from "../src/engine/geometry/point";
-import { startTangent, endTangent } from "../src/engine/geometry/curve";
+import { startTangent, endTangent, curveToPolyline } from "../src/engine/geometry/curve";
 import { isClosed, outlineArea, selfIntersects, segmentLength } from "../src/engine/geometry/path";
 
 /** PRNG déterministe (mulberry32) : les 200 cas sont les mêmes à chaque run. */
@@ -128,12 +128,12 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("emmanchures : passage par les points imposés, arrivée plate au dessous-bras", () => {
+  it("emmanchures : points imposés, queue léchant le repère de platitude, arrivée plate", () => {
     for (const m of bodies.slice(0, 50)) {
       const { dos, devant } = draftBuste(m);
-      for (const [piece, ids] of [
-        [dos, ["carrure-dos", "bissectrice-dos", "platitude-dos"]],
-        [devant, ["carrure-devant", "bissectrice-devant", "platitude-devant"]],
+      for (const [piece, ids, repereId] of [
+        [dos, ["carrure-dos", "bissectrice-dos"], "platitude-dos"],
+        [devant, ["carrure-devant", "bissectrice-devant"], "platitude-devant"],
       ] as const) {
         const junctions = piece.curves["emmanchure"].beziers.map((b) => b.p1);
         for (const id of ids) {
@@ -141,8 +141,23 @@ describe("invariants sur 200 mensurations plausibles", () => {
           const ok = junctions.some((j) => dist(j, target) < 1e-6);
           expect(ok, `${piece.id} passe par ${id}`).toBe(true);
         }
+        const poly = curveToPolyline(piece.curves["emmanchure"], 64);
+        // le repère de platitude n'est pas un point de passage exact : la
+        // queue du balayage vient lécher la ligne à son niveau (≤ 2,5 mm sur
+        // les mensurations extrêmes ; le profil démo est testé à ≤ 1,2 mm —
+        // la priorité est la tenue du virage, cf. golden anti-affaissement)
+        const repere = piece.points[repereId];
+        const ecart = Math.min(...poly.map((p) => dist(p, repere)));
+        expect(ecart, `${piece.id} queue au repère de platitude`).toBeLessThan(0.25);
         const t = endTangent(piece.curves["emmanchure"]);
         expect(Math.abs(t.y), `${piece.id} arrivée plate`).toBeLessThan(1e-6);
+        // jamais de ventre sous la ligne d'emmanchure (note buste.md §6/D7) ;
+        // tolérance = précision de traçage (0,5 mm), les résidus flottants du
+        // raccord tangent 45°/horizontale restant à l'échelle du micron
+        const yLigne = piece.points["dessous-bras"].y;
+        for (const p of poly) {
+          expect(p.y, `${piece.id} au-dessus de la ligne d'emmanchure`).toBeLessThanOrEqual(yLigne + 0.05);
+        }
       }
     }
   });

@@ -10,9 +10,9 @@
  */
 
 import type { Pt } from "../geometry/point";
-import { pt, polar, dist, rotateAround, scale } from "../geometry/point";
+import { pt, polar, dist, rotateAround, scale, sub } from "../geometry/point";
 import type { Curve } from "../geometry/curve";
-import { splineThrough, hermite, curveLength } from "../geometry/curve";
+import { splineThrough, hermite, concatCurves, curveLength } from "../geometry/curve";
 import { Draft } from "../drafting";
 import { METHOD, repartirPincesTaille } from "../method";
 import type { Measurements } from "../measurements";
@@ -27,24 +27,41 @@ function neckCurve(from: Pt, t0: Pt, to: Pt, t1: Pt) {
 }
 
 /**
- * Platitude d'emmanchure (p. 42, ét. 3) : rend le dernier segment de la
- * spline (platitude → dessous-bras) rectiligne horizontal et raccorde le
- * segment précédent tangent à l'horizontale — l'arrivée au point de côté
- * est plate.
+ * Emmanchure tracée comme au perroquet (p. 42-44, note §6/D7) : spline
+ * épaule → carrure → bissectrice où la courbe coupe la bissectrice à angle
+ * droit (tangente imposée à 45°, `sens` = +1 dos, −1 devant), puis UNE SEULE
+ * cubique bissectrice → dessous-bras — courbure continue sur tout le virage,
+ * aucune jonction avant le coin du côté. Raccord C1 à la bissectrice : même
+ * poignée `m1` des deux côtés, bornée par la valeur de bissectrice pour ne
+ * jamais passer sous la ligne d'emmanchure. L'arrivée est exactement
+ * horizontale au point de côté et la queue du virage vient lécher la ligne
+ * au repère de platitude (poignée `m2 = corde − m1`, sans inflexion). Le
+ * dernier centimètre n'est pas un segment à la règle : comme la queue du
+ * perroquet, il est quasi droit (écart au repère ≲ 1 mm, un trait de crayon).
  */
-function aplatirArrivee(c: Curve): Curve {
-  const beziers = c.beziers.map((b) => ({ ...b }));
-  const last = beziers[beziers.length - 1];
-  const y = last.p1.y;
-  last.c1 = { x: last.p0.x + (last.p1.x - last.p0.x) / 3, y };
-  last.c2 = { x: last.p0.x + (2 * (last.p1.x - last.p0.x)) / 3, y };
-  if (beziers.length >= 2) {
-    const prev = beziers[beziers.length - 2];
-    const l = Math.hypot(prev.p1.x - prev.c2.x, prev.p1.y - prev.c2.y) || 0.3;
-    const dir = Math.sign(last.p1.x - last.p0.x) || 1;
-    prev.c2 = { x: prev.p1.x - dir * l, y };
-  }
-  return { beziers };
+function courbeEmmanchure(
+  epaule: Pt,
+  carrure: Pt,
+  bissectrice: Pt,
+  dessousBras: Pt,
+  sens: 1 | -1,
+  tension: number,
+  valeurBissectrice: number,
+): Curve {
+  const a = (METHOD.TANGENTE_BISSECTRICE_DEG * Math.PI) / 180;
+  const d45 = pt(sens * Math.cos(a), Math.sin(a));
+  const haut = splineThrough([epaule, carrure, bissectrice], tension, [undefined, undefined, d45]);
+  const corde = dist(bissectrice, dessousBras);
+  // poignée du raccord : celle de la spline, bornée par la valeur de
+  // bissectrice (jamais sous la ligne) et par corde/3 (pas d'inflexion)
+  const m1 = Math.min((dist(bissectrice, carrure) * (1 - tension)) / 6, valeurBissectrice, corde / 3);
+  const dernier = haut.beziers[haut.beziers.length - 1];
+  dernier.c2 = sub(bissectrice, scale(d45, m1)); // raccord C1 : même poignée que le virage
+  // poignée d'arrivée à la demi-corde : le virage tient sa hauteur puis la
+  // queue lèche la ligne au repère de platitude (calibré sur les planches)
+  const m2 = corde / 2;
+  const virage = hermite(bissectrice, scale(d45, 3 * m1), dessousBras, pt(sens * 3 * m2, 0));
+  return concatCurves(haut, virage);
 }
 
 export function draftBuste(m: Measurements): BusteResult {
@@ -112,10 +129,10 @@ export function draftBuste(m: Measurements): BusteResult {
     "Point de bissectrice (1,5 cm du coin carrure/emmanchure)",
     "p. 42 ét. 2",
   );
-  const platitudeDos = dos.point(
+  dos.point(
     "platitude-dos",
     pt(xCote - METHOD.PLATITUDE_EMMANCHURE, yEmmanchure),
-    "Platitude : arrivée plate à 1 cm du côté",
+    "Repère de platitude : la queue du virage lèche la ligne à 1 cm du côté",
     "p. 42 ét. 3",
   );
 
@@ -152,8 +169,14 @@ export function draftBuste(m: Measurements): BusteResult {
   dos.line("epaule-dos", snpDos, epauleDos, "Épaule dos à 18°", "p. 41");
   dos.curve(
     "emmanchure",
-    aplatirArrivee(
-      splineThrough([epauleDos, carrureDosPt, bisDos, platitudeDos, dessousBrasDos], METHOD.TENSION.emmanchureDos),
+    courbeEmmanchure(
+      epauleDos,
+      carrureDosPt,
+      bisDos,
+      dessousBrasDos,
+      1,
+      METHOD.TENSION.emmanchureDos,
+      METHOD.BISSECTRICE_EMMANCHURE_DOS,
     ),
     "Emmanchure dos : épaule → carrure → bissectrice → platitude → côté",
     "p. 42-44",
@@ -260,10 +283,10 @@ export function draftBuste(m: Measurements): BusteResult {
     "Point de bissectrice (2,5 cm du coin)",
     "p. 42 ét. 2",
   );
-  const platitudeDevant = devant.point(
+  devant.point(
     "platitude-devant",
     pt(xCote + METHOD.PLATITUDE_EMMANCHURE, yEmmanchure),
-    "Platitude : arrivée plate à 1 cm du côté",
+    "Repère de platitude : la queue du virage lèche la ligne à 1 cm du côté",
     "p. 42 ét. 3",
   );
 
@@ -305,11 +328,14 @@ export function draftBuste(m: Measurements): BusteResult {
   devant.line("epaule-devant-2", pb2, epauleDevant, "Seconde moitié d'épaule, pivotée", "p. 52");
   devant.curve(
     "emmanchure",
-    aplatirArrivee(
-      splineThrough(
-        [epauleDevant, carrureDevantPt, bisDevant, platitudeDevant, dessousBras],
-        METHOD.TENSION.emmanchureDevant,
-      ),
+    courbeEmmanchure(
+      epauleDevant,
+      carrureDevantPt,
+      bisDevant,
+      dessousBras,
+      -1,
+      METHOD.TENSION.emmanchureDevant,
+      METHOD.BISSECTRICE_EMMANCHURE_DEVANT,
     ),
     "Emmanchure devant : épaule → carrure → bissectrice → platitude → côté",
     "p. 42-44",

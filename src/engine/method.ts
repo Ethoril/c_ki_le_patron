@@ -42,6 +42,14 @@ export const METHOD = {
   BISSECTRICE_EMMANCHURE_DEVANT: 2.5,
   /** Platitude d'emmanchure : l'arrivée au point de côté est plate sur 1 cm (p. 42, ét. 3). */
   PLATITUDE_EMMANCHURE: 1,
+  /**
+   * L'emmanchure coupe la bissectrice du coin à angle droit : au point de
+   * bissectrice, tangente à 45° de l'horizontale, en descente vers le côté
+   * (allure des planches p. 42-44, note buste.md §6/D7), puis un seul
+   * balayage à courbure continue jusqu'au point de côté, comme au perroquet ;
+   * la queue lèche la ligne d'emmanchure au repère de platitude.
+   */
+  TANGENTE_BISSECTRICE_DEG: 45,
 
   /** Valeur de la pince bretelle = tour de poitrine / 20 + 1 (p. 52 ; ex. 88 → 5,4). */
   PINCE_BRETELLE: (tourPoitrine: number) => tourPoitrine / 20 + 1,
