@@ -24,6 +24,8 @@ type State = {
   setMeasurements: (m: Measurements) => void;
   /** Fige le brouillon courant comme mesures du patron. */
   generer: () => void;
+  /** Revient aux mesures de base (profil de démonstration du livre) et régénère. */
+  reset: () => void;
   saveProfile: (name: string) => void;
   loadProfile: (name: string) => void;
   deleteProfile: (name: string) => void;
@@ -41,6 +43,8 @@ export const useStore = create<State>()(
         set((s) => ({ measurements: { ...s.measurements, [key]: value } })),
       setMeasurements: (m) => set({ measurements: { ...m }, generatedMeasurements: { ...m } }),
       generer: () => set((s) => ({ generatedMeasurements: { ...s.measurements } })),
+      reset: () =>
+        set({ measurements: { ...DEMO_MEASUREMENTS }, generatedMeasurements: { ...DEMO_MEASUREMENTS } }),
       saveProfile: (name) =>
         set((s) => ({ profiles: { ...s.profiles, [name]: { ...s.measurements } } })),
       loadProfile: (name) => {

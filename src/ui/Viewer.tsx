@@ -1,6 +1,6 @@
 /** Viewer SVG : zoom molette (centré sur le curseur), pan à la souris, grille centimétrique. */
 
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import type { Pattern } from "../engine/generate";
 import { boundingBox } from "../engine/geometry/path";
 import { PieceSvg } from "../render/svg";
@@ -49,6 +49,9 @@ export function Viewer({ pattern, construction }: { pattern: Pattern; constructi
     // recadre uniquement quand la géométrie change
   }, [pattern]);
   const [vb, setVb] = useState<ViewBox | null>(null);
+  // recadre sur le nouveau tracé à chaque génération : sans cela le zoom/pan
+  // reste calé sur l'ancien patron et le nouveau peut se retrouver hors champ
+  useEffect(() => setVb(null), [pattern]);
   const view = vb ?? initial;
   const drag = useRef<{ px: number; py: number; vb: ViewBox } | null>(null);
 

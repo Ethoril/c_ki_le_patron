@@ -14,6 +14,7 @@ export default function App() {
   const measurements = useStore((s) => s.measurements);
   const generatedMeasurements = useStore((s) => s.generatedMeasurements);
   const generer = useStore((s) => s.generer);
+  const reset = useStore((s) => s.reset);
   const modeConstruction = useStore((s) => s.modeConstruction);
   const toggleModeConstruction = useStore((s) => s.toggleModeConstruction);
   const [onglet, setOnglet] = useState<Onglet>("mesures");
@@ -75,13 +76,22 @@ export default function App() {
       <div className="flex min-h-0 flex-1">
         <aside className="flex w-80 shrink-0 flex-col border-r border-gray-200 bg-gray-50">
           <div className="border-b border-gray-200 bg-white p-3">
-            <button
-              disabled={errors.length > 0 || !dirty}
-              onClick={generer}
-              className="w-full rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Générer le patron
-            </button>
+            <div className="flex gap-2">
+              <button
+                disabled={errors.length > 0 || !dirty}
+                onClick={generer}
+                className="flex-1 rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Générer le patron
+              </button>
+              <button
+                onClick={reset}
+                title="Revenir aux mesures de base (valeurs d'exemple du livre) et régénérer"
+                className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Réinitialiser
+              </button>
+            </div>
             {errors.length > 0 ? (
               <p className="mt-1.5 text-xs text-red-600">Corriger les mesures en erreur avant de générer.</p>
             ) : dirty ? (
