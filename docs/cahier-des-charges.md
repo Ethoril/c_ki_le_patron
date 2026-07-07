@@ -26,7 +26,8 @@ Le projet est hébergé sur GitHub, déployé automatiquement sur GitHub Pages, 
 
 ### 3.1 Saisie des mensurations
 
-- Formulaire groupé par familles (contours, longueurs, largeurs, poitrine), unités en cm, pas de 0,5.
+- Formulaire groupé par familles (contours, longueurs, largeurs, poitrine, réglages), unités en cm, pas de 0,5.
+- **Champs optionnels** (vides = comportement du livre, `docs/methode/buste.md` §Extensions hors livre) : **pente d'épaule** (dénivelé mesuré, remplace les angles 18°/26°) et **aisance globale** (0–5 cm au tour, défaut 2 ; 0 = patron de base du livre strict).
 - **Validation à deux niveaux** : bornes physiques par mesure (erreur bloquante), et contrôles de cohérence issus de la méthode (avertissement non bloquant). Exemples de contrôles de cohérence : carrure devant < carrure dos (le livre indique qu'une carrure devant ≥ dos signale une erreur de prise de mesure) ; longueur devant > longueur dos ; tour de taille < tour de poitrine.
 - Jeux de mesures : sauvegarde locale (localStorage) de plusieurs profils nommés, import/export JSON. Un profil de démonstration (les valeurs d'exemple du livre : poitrine 88, taille 68, bassin 92, cou 38) sert de référence de test.
 
@@ -207,9 +208,9 @@ Règle de travail avec Claude Code : **aucune modification du moteur sans test q
 | **M2** | UI : formulaire validé, profils localStorage, viewer SVG zoom/pan, mode construction, panneau des valeurs | Le buste du profil démo s'affiche conforme aux planches du livre |
 | **M3** | Exports : SVG 1:1 + PDF A4 tuilé avec repères d'assemblage | Un patron imprimé et scotché a le bon carré test de 10 cm |
 | **M4** | Jupe (moteur + tests + UI) | |
-| **M5** | Manche, avec mesure d'emmanchure inter-pièces + vérification tête de manche | |
+| **M5** | Manche, avec mesure d'emmanchure inter-pièces + vérification tête de manche. Prévoir le **cran de montage à 1/3 de la longueur d'emmanchure mesurée sur la courbe** (repère dos/devant pour poser la manche — pratique relevée le 2026-07-07 en comparant une méthode tierce, anicka.design) | |
 | **M6** | Pantalon | |
-| **M7+** | Mode pas-à-pas, pinces supplémentaires automatiques, transformations de base | |
+| **M7+** | Mode pas-à-pas, pinces supplémentaires automatiques, transformations de base. Inclure une **check-list d'essayage de la toile** guidée : pas de plis de tension à l'encolure dos ni à l'emmanchure, milieux et coutures de côté d'aplomb, pince pointant vers le saillant sans l'atteindre (même source du 2026-07-07) | |
 
 Chaque jalon = une branche, une PR, le déploiement Pages se fait au merge sur `main`.
 

@@ -23,6 +23,19 @@ export type Measurements = {
   ecartPoitrine: number;
   /** Longueur d'épaule (cm). */
   longueurEpaule: number;
+  /**
+   * Pente d'épaule (cm, OPTIONNELLE) : dénivelé vertical entre le point
+   * d'encolure côté cou et la pointe d'épaule. Renseignée, elle remplace les
+   * angles 18°/26° du livre (buste.md §Extensions hors livre) ; absente, les
+   * angles de la méthode s'appliquent.
+   */
+  penteEpaule?: number;
+  /**
+   * Aisance globale (cm au tour, OPTIONNELLE, 0–5, défaut produit 2) :
+   * ajoutée aux tours de poitrine et de taille avant division (buste.md
+   * §Extensions hors livre). Absente = 0 = patron de base du livre.
+   */
+  aisance?: number;
 };
 
 export type MeasurementKey = keyof Measurements;
@@ -31,9 +44,13 @@ export type MeasurementField = {
   key: MeasurementKey;
   label: string;
   /** Famille pour le regroupement du formulaire. */
-  group: "contours" | "longueurs" | "largeurs" | "poitrine";
+  group: "contours" | "longueurs" | "largeurs" | "poitrine" | "reglages";
   min: number;
   max: number;
+  /** Champ facultatif : vide = comportement par défaut de la méthode. */
+  optional?: boolean;
+  /** Aide affichée sous le champ. */
+  hint?: string;
 };
 
 export const MEASUREMENT_FIELDS: MeasurementField[] = [
@@ -46,9 +63,30 @@ export const MEASUREMENT_FIELDS: MeasurementField[] = [
   { key: "carrureDos", label: "Carrure dos", group: "largeurs", min: 26, max: 55 },
   { key: "carrureDevant", label: "Carrure devant", group: "largeurs", min: 24, max: 52 },
   { key: "longueurEpaule", label: "Longueur d'épaule", group: "largeurs", min: 8, max: 20 },
+  {
+    key: "penteEpaule",
+    label: "Pente d'épaule",
+    group: "largeurs",
+    min: 1,
+    max: 9,
+    optional: true,
+    hint: "Optionnelle — dénivelé vertical encolure → pointe d'épaule ; à vide, angles du livre (18°/26°).",
+  },
   { key: "hauteurPoitrine", label: "Hauteur de poitrine", group: "poitrine", min: 18, max: 40 },
   { key: "ecartPoitrine", label: "Écart de poitrine", group: "poitrine", min: 12, max: 30 },
+  {
+    key: "aisance",
+    label: "Aisance",
+    group: "reglages",
+    min: 0,
+    max: 5,
+    optional: true,
+    hint: "Ajoutée au tour de poitrine et de taille ; 0 = patron de base du livre, sans aisance.",
+  },
 ];
+
+/** Aisance proposée par défaut (cm au tour) — le patron du livre reste accessible à 0. */
+export const AISANCE_DEFAUT = 2;
 
 /**
  * Profil de démonstration : valeurs d'exemple du livre (poitrine 88, taille 68,
@@ -66,6 +104,7 @@ export const DEMO_MEASUREMENTS: Measurements = {
   hauteurPoitrine: 26,
   ecartPoitrine: 18,
   longueurEpaule: 13,
+  aisance: AISANCE_DEFAUT,
 };
 
 export type ValidationError = { key: MeasurementKey; message: string };
@@ -76,7 +115,10 @@ export function validateBounds(m: Measurements): ValidationError[] {
   const errors: ValidationError[] = [];
   for (const f of MEASUREMENT_FIELDS) {
     const v = m[f.key];
-    if (!Number.isFinite(v)) {
+    if (v === undefined) {
+      // les champs optionnels vides prennent le comportement par défaut de la méthode
+      if (!f.optional) errors.push({ key: f.key, message: `${f.label} : valeur manquante ou invalide` });
+    } else if (!Number.isFinite(v)) {
       errors.push({ key: f.key, message: `${f.label} : valeur manquante ou invalide` });
     } else if (v < f.min || v > f.max) {
       errors.push({ key: f.key, message: `${f.label} : doit être entre ${f.min} et ${f.max} cm` });
@@ -111,6 +153,13 @@ export function checkCoherence(m: Measurements): ValidationWarning[] {
     warnings.push({
       code: "hauteur-poitrine-incoherente",
       message: "Hauteur de poitrine ≥ longueur devant : le saillant serait sous la taille.",
+    });
+  }
+  if (m.penteEpaule !== undefined && m.penteEpaule > 0.7 * m.longueurEpaule) {
+    warnings.push({
+      code: "pente-epaule-forte",
+      message:
+        "Pente d'épaule > 0,7 × longueur d'épaule (angle au-delà de 45°) : vérifier la prise de mesure, l'angle sera plafonné à 45°.",
     });
   }
   return warnings;

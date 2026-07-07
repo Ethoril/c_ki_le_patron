@@ -14,7 +14,7 @@ import { pt, polar, dist, rotateAround, scale, sub } from "../geometry/point";
 import type { Curve } from "../geometry/curve";
 import { splineThrough, hermite, concatCurves, curveLength } from "../geometry/curve";
 import { Draft } from "../drafting";
-import { METHOD, repartirPincesTaille } from "../method";
+import { METHOD, anglesEpaule, repartirPincesTaille } from "../method";
 import type { Measurements } from "../measurements";
 import type { PatternPiece, DraftReport, DraftWarning, ReportValue } from "../types";
 
@@ -73,13 +73,28 @@ export function draftBuste(m: Measurements): BusteResult {
   const profEncolureDos = METHOD.ENCOLURE_PROFONDEUR_DOS(m.tourCou);
   const profEncolureDevant = METHOD.ENCOLURE_PROFONDEUR_DEVANT(largeurEncolure);
 
+  // ——— Aisance globale (extension hors livre, buste.md §Extensions) : ajoutée
+  // aux tours avant division ; à 0, tracé du livre. U reste sur les mesures du
+  // corps : la même aisance s'ajoute à la poitrine et à la taille.
+  const aisance = m.aisance ?? 0;
+  const poitrineAisee = m.tourPoitrine + aisance;
+
+  // ——— Angles d'épaule : 18°/26° du livre, ou déduits de la pente mesurée
+  const angles = anglesEpaule(m.longueurEpaule, m.penteEpaule);
+  if (angles.plafonne) {
+    warnings.push({
+      code: "pente-epaule-plafonnee",
+      message: `Pente d'épaule ${m.penteEpaule} cm incohérente avec la longueur d'épaule ${m.longueurEpaule} cm : angle plafonné à 45°.`,
+    });
+  }
+
   // ——— Lignes horizontales du gabarit, établies par le dos (p. 33-34, ét. 1-8)
-  const largeurPlanche = m.tourPoitrine / 2; // milieu dos x=0, milieu devant x=largeurPlanche
+  const largeurPlanche = poitrineAisee / 2; // milieu dos x=0, milieu devant x=largeurPlanche
   const yTaille = m.longueurDos; // C1 : la longueur dos se reporte depuis la ligne d'épaule (y=0)
   const yEmmanchure = METHOD.LIGNE_EMMANCHURE(m.longueurDos); // C3 : mi-distance épaule ↔ taille
   const yCarrure = METHOD.LIGNE_CARRURE(m.longueurDos); // C4 : longueur dos / 3
   // C5 : largeurs ∓ 1 — les deux lignes de côté coïncident dans le repère miroir
-  const xCote = m.tourPoitrine / 4 - METHOD.DEMI_LARGEUR_AJUSTEMENT;
+  const xCote = poitrineAisee / 4 - METHOD.DEMI_LARGEUR_AJUSTEMENT;
 
   // ——— Répartition des pinces de taille (p. 54-58) — côté commun aux deux pièces
   const aAbsorberHaut = Math.max(0, (m.tourPoitrine - m.tourTaille) / 4);
@@ -109,11 +124,12 @@ export function draftBuste(m: Measurements): BusteResult {
   const nuque = dos.point("nuque", pt(0, profEncolureDos), "Nuque : profondeur d'encolure sous la ligne d'épaule", "p. 40");
   const snpDos = dos.point("snp-dos", pt(largeurEncolure, 0), "Point d'encolure côté cou, SUR la ligne d'épaule", "p. 39");
 
-  // 3 — Épaule dos à 18° (p. 41) ; pince d'épaule absorbée (ét. 4, p. 47) : longueur = épaule mesurée
+  // 3 — Épaule dos à 18° — ou à l'angle déduit de la pente d'épaule mesurée
+  // (p. 41 ; buste.md §Extensions) ; pince absorbée (ét. 4, p. 47) : longueur = épaule mesurée
   const epauleDos = dos.point(
     "epaule-dos",
-    polar(snpDos, METHOD.ANGLE_EPAULE_DOS, m.longueurEpaule),
-    "Extrémité d'épaule dos (18°)",
+    polar(snpDos, angles.dos, m.longueurEpaule),
+    `Extrémité d'épaule dos (${angles.dos.toFixed(0)}°)`,
     "p. 41",
   );
 
@@ -161,12 +177,12 @@ export function draftBuste(m: Measurements): BusteResult {
       nuque,
       pt(1, 0), // platitude au milieu dos : tangente horizontale à la nuque (p. 63)
       snpDos,
-      pt(Math.sin((METHOD.ANGLE_EPAULE_DOS * Math.PI) / 180), -Math.cos((METHOD.ANGLE_EPAULE_DOS * Math.PI) / 180)),
+      pt(Math.sin((angles.dos * Math.PI) / 180), -Math.cos((angles.dos * Math.PI) / 180)),
     ),
     "Encolure dos : platitude au milieu, raccord sur l'épaule",
     "p. 39-40, 63",
   );
-  dos.line("epaule-dos", snpDos, epauleDos, "Épaule dos à 18°", "p. 41");
+  dos.line("epaule-dos", snpDos, epauleDos, `Épaule dos à ${angles.dos.toFixed(0)}°`, "p. 41");
   dos.curve(
     "emmanchure",
     courbeEmmanchure(
@@ -237,10 +253,11 @@ export function draftBuste(m: Measurements): BusteResult {
     "p. 50",
   );
 
-  // D5 — Épaule devant à 26° + pince bretelle (p. 41, 49-53)
+  // D5 — Épaule devant à 26° (ou angle dos mesuré + différentiel de la
+  // méthode, buste.md §Extensions) + pince bretelle (p. 41, 49-53)
   // Option pince d'épaule dos absorbée : épaule devant = épaule − 1 (p. 47)
   const longueurEpauleDevant = m.longueurEpaule - METHOD.EMBU_EPAULE_DOS;
-  const dirEpauleDevant = 180 - METHOD.ANGLE_EPAULE_DEVANT; // vers le côté, en descendant
+  const dirEpauleDevant = 180 - angles.devant; // vers le côté, en descendant
   const epauleProvisoire = polar(snpDevant, dirEpauleDevant, longueurEpauleDevant);
   const pb1 = devant.point(
     "pince-bretelle-1",
@@ -323,7 +340,7 @@ export function draftBuste(m: Measurements): BusteResult {
     "Encolure devant : verticale à l'encolure, plate à la gorge",
     "p. 40, 63",
   );
-  devant.line("epaule-devant-1", snpDevant, pb1, "Première moitié d'épaule devant (26°)", "p. 41");
+  devant.line("epaule-devant-1", snpDevant, pb1, `Première moitié d'épaule devant (${angles.devant.toFixed(0)}°)`, "p. 41");
   devant.line("bouche-pince-bretelle", pb1, pb2, "Ouverture de la pince bretelle", "p. 52");
   devant.line("epaule-devant-2", pb2, epauleDevant, "Seconde moitié d'épaule, pivotée", "p. 52");
   devant.curve(
@@ -374,6 +391,21 @@ export function draftBuste(m: Measurements): BusteResult {
   const emmanchureDevant = curveLength(devantPiece.curves["emmanchure"]);
 
   values.push(
+    { key: "aisance", label: "Aisance ajoutée au tour", value: aisance, unit: "cm" },
+    {
+      key: "angleEpauleDos",
+      label: m.penteEpaule === undefined ? "Angle d'épaule dos (méthode)" : "Angle d'épaule dos (pente mesurée)",
+      value: angles.dos,
+      unit: "°",
+      bookRef: "p. 41",
+    },
+    {
+      key: "angleEpauleDevant",
+      label: m.penteEpaule === undefined ? "Angle d'épaule devant (méthode)" : "Angle d'épaule devant (pente + 8°)",
+      value: angles.devant,
+      unit: "°",
+      bookRef: "p. 41",
+    },
     { key: "largeurEncolure", label: "Largeur d'encolure (cou/6 + 1)", value: largeurEncolure, unit: "cm", bookRef: "p. 39", arrondi: true },
     { key: "profEncolureDos", label: "Profondeur d'encolure dos (cou/16)", value: profEncolureDos, unit: "cm", bookRef: "p. 40", arrondi: true },
     { key: "profEncolureDevant", label: "Profondeur d'encolure devant (largeur + 2)", value: profEncolureDevant, unit: "cm", bookRef: "p. 40", arrondi: true },

@@ -63,8 +63,13 @@ export const METHOD = {
    */
   EMBU_EPAULE_DOS: 1,
 
-  /** Sommet de la pince de taille devant : 2 cm sous le saillant. [transcription, planches p. 54] */
-  RETRAIT_SOMMET_PINCE_DEVANT: 2,
+  /**
+   * Sommet de la pince de taille devant : 4 cm sous le saillant — la pointe
+   * ne tombe jamais sur le saillant. [transcription : non chiffré par le
+   * livre (planches p. 54) ; 4 cm retenus le 2026-07-07 par recoupement
+   * externe (anicka.design), à confirmer à l'essayage]
+   */
+  RETRAIT_SOMMET_PINCE_DEVANT: 4,
   /**
    * Sommet de la pince demi-dos : 2 cm au-dessus de la ligne d'emmanchure,
    * entre emmanchure et carrure comme sur les planches (p. 55, fig. 2).
@@ -113,6 +118,32 @@ export type RepartitionTaille = {
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+export type AnglesEpaule = {
+  /** Angle de l'épaule dos, en degrés sous l'horizontale. */
+  dos: number;
+  /** Angle de l'épaule devant (ligne d'épaule devant), en degrés. */
+  devant: number;
+  /** Vrai si la pente mesurée dépassait le plafond de 45° (avertissement). */
+  plafonne: boolean;
+};
+
+/**
+ * Angles d'épaule effectifs — extension hors livre (buste.md §Extensions,
+ * validée le 2026-07-07). Si la pente d'épaule est mesurée (dénivelé vertical
+ * encolure → pointe d'épaule, cm), l'angle dos = asin(pente / longueur
+ * d'épaule) et le devant conserve le différentiel de la méthode (26 − 18 =
+ * 8°) ; l'angle dos est plafonné à 45°. Sans mesure : 18°/26° (p. 41).
+ */
+export function anglesEpaule(longueurEpaule: number, penteEpaule?: number): AnglesEpaule {
+  const differentiel = METHOD.ANGLE_EPAULE_DEVANT - METHOD.ANGLE_EPAULE_DOS;
+  if (penteEpaule === undefined || !Number.isFinite(penteEpaule) || longueurEpaule <= 0) {
+    return { dos: METHOD.ANGLE_EPAULE_DOS, devant: METHOD.ANGLE_EPAULE_DEVANT, plafonne: false };
+  }
+  const ratio = clamp(penteEpaule / longueurEpaule, 0, Math.SQRT1_2); // sin(45°)
+  const dos = (Math.asin(ratio) * 180) / Math.PI;
+  return { dos, devant: dos + differentiel, plafonne: penteEpaule / longueurEpaule > Math.SQRT1_2 };
+}
 
 /**
  * Algorithme de la note de méthode (docs/methode/buste.md §Répartition),

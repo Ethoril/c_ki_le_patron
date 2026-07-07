@@ -20,10 +20,17 @@ describe("export SVG 1:1", () => {
     expect(svg).toContain("carré de contrôle 5 cm");
   });
 
-  it("cartouche : mesures, date, mention sans coutures", () => {
-    expect(svg).toContain("SANS valeurs de couture ni aisance");
+  it("cartouche : mesures, date, mention sans coutures et aisance appliquée", () => {
+    // le profil démo porte l'aisance produit par défaut (2 cm au tour)
+    expect(svg).toContain("SANS valeurs de couture, aisance 2 cm au tour");
     expect(svg).toContain("06/07/2026");
     expect(svg).toContain("Poitrine 88 · Taille 68 · Bassin 92 · Cou 38");
+  });
+
+  it("cartouche : mention « sans aisance » quand l'aisance est nulle", () => {
+    const livre = { ...DEMO_MEASUREMENTS, aisance: 0 };
+    const svgLivre = buildExportSvg(generate(livre).pieces, livre, new Date(2026, 6, 6));
+    expect(svgLivre).toContain("SANS valeurs de couture, sans aisance");
   });
 
   it("snapshot du tracé du profil démo", () => {

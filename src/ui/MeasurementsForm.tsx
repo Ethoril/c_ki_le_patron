@@ -9,6 +9,7 @@ const GROUPES: { id: (typeof MEASUREMENT_FIELDS)[number]["group"]; label: string
   { id: "longueurs", label: "Longueurs" },
   { id: "largeurs", label: "Largeurs" },
   { id: "poitrine", label: "Poitrine" },
+  { id: "reglages", label: "Réglages du patron" },
 ];
 
 export function MeasurementsForm({
@@ -38,14 +39,20 @@ export function MeasurementsForm({
                       step={0.5}
                       min={f.min}
                       max={f.max}
-                      value={measurements[f.key]}
-                      onChange={(e) => setMeasurement(f.key, e.target.valueAsNumber)}
+                      value={measurements[f.key] ?? ""}
+                      placeholder={f.optional ? "—" : undefined}
+                      onChange={(e) => {
+                        const v = e.target.valueAsNumber;
+                        // champ optionnel vidé → comportement par défaut de la méthode
+                        setMeasurement(f.key, f.optional && Number.isNaN(v) ? undefined : v);
+                      }}
                       className={`w-full rounded border px-2 py-1 text-sm ${
                         error ? "border-red-500 bg-red-50" : "border-gray-300"
                       }`}
                     />
                     <span className="text-xs text-gray-400">cm</span>
                   </div>
+                  {f.hint && <p className="mt-0.5 text-xs text-gray-400">{f.hint}</p>}
                   {error && <p className="mt-0.5 text-xs text-red-600">{error.message}</p>}
                 </label>
               );

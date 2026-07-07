@@ -36,8 +36,11 @@
 - `y = 0` : **ligne d'épaule dos** (horizontale de référence du gabarit, p. 33
   ét. 2). Le point d'encolure côté cou du dos est SUR cette ligne ; la nuque
   est en dessous (C2).
-- Le patron est tracé **sans aisance ni valeurs de couture** (p. 18 : les
-  élargissements s'ajoutent à la transformation, jamais à la prise de mesures).
+- Le patron de base du livre est tracé **sans aisance ni valeurs de couture**
+  (p. 18 : les élargissements s'ajoutent à la transformation, jamais à la
+  prise de mesures). Une **aisance globale optionnelle** (0–5 cm au tour,
+  défaut produit 2) peut néanmoins élargir le gabarit — voir §Extensions hors
+  livre ; réglée à 0, le tracé est exactement celui du livre.
 - **Arrondis : pour l'affichage uniquement.** Le livre arrondit ses exemples
   au demi-centimètre supérieur (7,33 → 7,5) mais recommande explicitement de
   construire avec les valeurs exactes (p. 40 : « il vaut mieux travailler avec
@@ -97,7 +100,9 @@ Exemple longueur dos 40 : emmanchure y = 20, carrure y = 13,33.
    convention v1 : arrivée ≈ perpendiculaire à la ligne d'épaule inclinée —
    **[À VALIDER à l'essayage]**, le livre ne chiffre pas l'angle d'arrivée).
 3. **Épaule dos** (p. 41). Droite à **18° sous l'horizontale** depuis
-   `snp-dos`, longueur = **longueur d'épaule** → `epaule-dos`.
+   `snp-dos`, longueur = **longueur d'épaule** → `epaule-dos`. (Si la pente
+   d'épaule est mesurée, l'angle est déduit de la mesure — §Extensions hors
+   livre.)
    Option B du livre (non implémentée) : fixer l'extrémité par la largeur dos
    (verticale à largeur dos/2 depuis le milieu dos) et joindre à 18° — les
    deux méthodes doivent coïncider si les mesures sont justes (p. 41).
@@ -193,7 +198,8 @@ D4. **Vérifications sur mesure** (p. 51 — optionnelles v1, prévues au rappor
    modifient pas les étapes du tracé » (p. 21) — v1 : affichage d'un écart
    constaté, sans correction automatique.
 D5. **Épaule devant + pince bretelle** (p. 41 ; p. 49-53). Épaule provisoire à
-   **26° sous l'horizontale** depuis `snp-devant`, longueur = longueur
+   **26° sous l'horizontale** depuis `snp-devant` (angle déduit de la pente
+   d'épaule si elle est mesurée — §Extensions hors livre), longueur = longueur
    d'épaule (− 1 cm si option pince d'épaule absorbée, cf. dos ét. 4).
    Pince bretelle :
    - `pince-bretelle-1` = **milieu de la longueur d'épaule** (p. 52) ;
@@ -231,9 +237,11 @@ D8. **Pinces de taille devant** (p. 54-55).
    - **Pince du devant** : axe vertical **passant par le saillant** (p. 54,
      ét. 1 : tracée depuis le saillant, valeur répartie de façon équilibrée
      des deux côtés de l'axe). Largeur ≤ **3 cm** ; extrémité basse ≤ 9 cm
-     sous la taille (hors v1) ; extrémité haute : **[À VALIDER : non chiffrée ;
-     les planches la montrent juste sous la croix du saillant — proposition
-     v1 : y saillant + 2.]**
+     sous la taille (hors v1) ; extrémité haute : **y saillant + 4**. Le livre
+     ne chiffre pas ce retrait (planches : juste sous la croix du saillant) ;
+     4 cm retenus le 2026-07-07 par recoupement avec une méthode tierce
+     (anicka.design : la pointe ne doit jamais tomber sur le saillant, 4 cm
+     en dessous), à confirmer à l'essayage.
    - **Pince de côté devant** : tracée en premier, la pince dos en miroir
      (p. 54, ét. 2-3) ; ≤ 4 cm ; partie haute à la règle (p. 61).
 D9. **Côté devant** : droite de `dessous-bras` au point de taille cintré.
@@ -291,12 +299,49 @@ portée au patron.
 - Rotation de pince bretelle limitée à la seconde moitié d'épaule (cf. D6).
 - Ligne de petites hanches : ligne d'aide, pas de construction (p. 36) — non
   tracée en v1.
-- Élargissements de base (p. 66) : hors périmètre, le patron de base est sans
-  aisance.
+- Élargissements de base (p. 66) : hors périmètre ; l'aisance globale
+  optionnelle (§Extensions hors livre) en anticipe le seul cas uniforme, le
+  patron de base restant celui du livre à aisance 0.
 - Les longueurs d'emmanchure dos et devant sont mesurées sur les courbes
   tracées et exposées dans le rapport — donnée d'entrée de la manche (M5),
   avec le tour du corps au niveau de la carrure comme mesure de contrôle de
   la tête de manche (p. 22).
+
+## Extensions hors livre (validées le 2026-07-07)
+
+Deux paramètres issus de la comparaison avec une méthode tierce
+(anicka.design, « How to draft a basic bodice block pattern ») étendent la
+transcription **sans la modifier** : à leur valeur neutre, le tracé est
+exactement celui du livre.
+
+### Aisance globale (0–5 cm au tour, défaut produit 2)
+
+- Ajoutée aux **tours** avant division : milieu devant à
+  x = (poitrine + aisance)/2 ; lignes de côté à
+  x = (poitrine + aisance)/4 − 1 ; largeur à la taille après pinces =
+  (taille + aisance)/4 ∓ 1.
+- **U = (poitrine − taille)/4 inchangé** : la même aisance s'ajoute aux deux
+  tours, la répartition des pinces ne bouge pas.
+- Restent sur les mesures du **corps** (jamais élargies) : encolure, carrures,
+  écart et hauteur de poitrine, longueurs, et la pince bretelle
+  (poitrine/20 + 1 — pince anatomique).
+- aisance absente (anciens profils enregistrés) = 0 ; les golden tests du
+  livre tournent à 0.
+- Le livre ajoute ses élargissements à la transformation (p. 66) ; ce
+  paramètre en est une anticipation limitée au cas uniforme.
+
+### Pente d'épaule mesurée (optionnelle)
+
+- Mesure : dénivelé **vertical** entre le point d'encolure côté cou et la
+  pointe d'épaule (cm). Non renseignée → angles du livre **18°/26°** (p. 41).
+- Renseignée : angle dos = **asin(pente / longueur d'épaule)** ; angle
+  devant = angle dos + 8° — le différentiel 26° − 18° de la méthode est
+  conservé, les deux angles se lisant sur des lignes d'épaule de référence
+  différentes. **[À VALIDER à l'essayage : le report du différentiel est un
+  choix de transcription.]**
+- Garde-fou : angle dos plafonné à **45°** (avertissement du moteur ; contrôle
+  de cohérence du formulaire si pente > 0,7 × longueur d'épaule).
+- pente = longueur d'épaule × sin(18°) → tracé identique au défaut.
 
 ## Invariants testés (tests/invariants.test.ts)
 
@@ -304,8 +349,11 @@ portée au patron.
 - Épaules : |épaule devant hors pince| = |épaule dos| − 1 cm (option pince
   absorbée ; l'écart de 1 cm est l'embu du montage, p. 47).
 - Jambes de pince bretelle égalisées : ||jambe 1| − |jambe 2|| < 0,01.
-- Largeur à la taille après déduction des pinces = taille/4 ∓ 1 (dos : −1,
-  devant : +1), à l'excédent signalé près.
+- Largeur à la taille après déduction des pinces = (taille + aisance)/4 ∓ 1
+  (dos : −1, devant : +1), à l'excédent signalé près.
+- Extensions neutres (aisance 0 ou absente, pente non renseignée) → géométrie
+  strictement identique au tracé du livre ; pente mesurée → dénivelé vertical
+  de l'épaule dos = pente (plafonné à 45°).
 - Pinces de côté dos et devant de même valeur ; longueurs de côté dos =
   devant (emmanchure → taille).
 - Nuque SOUS la ligne d'épaule (y > 0) ; encolure dos à tangente horizontale

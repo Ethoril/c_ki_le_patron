@@ -16,6 +16,7 @@ import type { Segment } from "../engine/geometry/path";
 import { boundingBox, segmentStart } from "../engine/geometry/path";
 import { dartOutline } from "../engine/drafting";
 import type { Measurements } from "../engine/measurements";
+import { cartoucheLignes } from "./cartouche";
 
 // ——— Géométrie de page (cm)
 const PAGE = { w: 21, h: 29.7 }; // A4 portrait
@@ -145,12 +146,7 @@ function pageGarde(doc: jsPDF, pieces: PatternPiece[], m: Measurements, date: Da
   y += 1;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  const cartouche = [
-    `Généré le ${date.toLocaleDateString("fr-FR")} — échelle 1:1 — SANS valeurs de couture ni aisance`,
-    `Poitrine ${m.tourPoitrine} · Taille ${m.tourTaille} · Bassin ${m.tourBassin} · Cou ${m.tourCou}`,
-    `Long. dos ${m.longueurDos} · Long. devant ${m.longueurDevant} · Carrure dos ${m.carrureDos} · Carrure devant ${m.carrureDevant}`,
-    `Épaule ${m.longueurEpaule} · Haut. poitrine ${m.hauteurPoitrine} · Écart poitrine ${m.ecartPoitrine} (cm)`,
-  ];
+  const cartouche = cartoucheLignes(m, date);
   for (const t of cartouche) {
     doc.text(t, x0, y);
     y += 0.6;

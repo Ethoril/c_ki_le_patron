@@ -19,7 +19,7 @@ type State = {
   generatedMeasurements: Measurements | null;
   profiles: Record<string, Measurements>;
   modeConstruction: boolean;
-  setMeasurement: (key: MeasurementKey, value: number) => void;
+  setMeasurement: (key: MeasurementKey, value: number | undefined) => void;
   /** Remplace tout le jeu de mesures (profil, import JSON) et régénère : le jeu est cohérent. */
   setMeasurements: (m: Measurements) => void;
   /** Fige le brouillon courant comme mesures du patron. */
