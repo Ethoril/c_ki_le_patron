@@ -73,9 +73,9 @@ taille ≥ poitrine · hauteur poitrine ≥ longueur devant.
 | 4 | `epaule-dos` | depuis `snp-dos`, droite à **18° sous l'horizontale**, longueur = **épaule mesurée** (pince d'épaule absorbée, p. 47) | (19,70 ; 4,02) |
 | 5 | `carrure-dos` | (carrure dos / 2 ; y carrure) | (17,5 ; 13,67) |
 | 6 | `bissectrice-dos` | coin (carrure dos/2 ; y emmanchure) + **1,5 cm** sur la bissectrice à 45° vers le haut-côté : +1,5·√2/2 en x, −1,5·√2/2 en y | (18,56 ; 19,44) |
-| 7 | `platitude-dos` | (x côté − **1** ; y emmanchure) | (20 ; 20,5) |
+| 7 | `platitude-dos` | **repère** à (x côté − **1** ; y emmanchure) — la queue du virage lèche la ligne à son niveau (~1 mm), ce n'est pas un point de passage exact | (20 ; 20,5) |
 | 8 | `dessous-bras` | (x côté ; y emmanchure) | (21 ; 20,5) |
-| 9 | Emmanchure dos | spline passant par 4-5-6-7-8 dans cet ordre ; **arrivée forcée horizontale** sur le dernier centimètre (platitude, p. 42 ét. 3) | longueur mesurée 18,79 |
+| 9 | Emmanchure dos | spline 4-5-6 avec tangente **imposée à 45°** au point de bissectrice (la courbe coupe la bissectrice à angle droit, p. 42-44), puis **une seule cubique** 6 → 8 à courbure continue (coup de perroquet), raccordée **C1** ; arrivée exactement horizontale au dessous-bras | longueur mesurée 18,63 |
 | 10 | Côté dos | **droite** de `dessous-bras` à (x côté − pince de côté ; y taille) | → (19 ; 41) |
 | 11 | Milieu dos cintré | droite de (milieu dos ; y taille) à (0 ; **y emmanchure**), puis verticale jusqu'à la nuque | (1 ; 41) → (0 ; 20,5) |
 | 12 | Pince demi-dos | axe = milieu entre milieu dos cintré et côté cintré à la taille ; sommet à **2 cm au-dessus** de la ligne d'emmanchure ⚠ interprétation ; jambes à ± valeur/2 sur la taille | axe x = 10 ; sommet (10 ; 18,5) |
@@ -95,8 +95,8 @@ taille ≥ poitrine · hauteur poitrine ≥ longueur devant.
 | 9 | `epaule-devant` | extrémité provisoire pivotée de −θ ; la seconde moitié d'épaule (pb2 → extrémité) garde sa longueur de 6 cm | (21,42 ; 4,87) |
 | 10 | `carrure-devant` | (44 − carrure devant/2 ; y carrure) — **non pivotée** (la pince est fermée avant le tracé de l'emmanchure dans le livre ; choix documenté : seuls l'épaule et le haut d'emmanchure pivotent) | (27,5 ; 13,67) |
 | 11 | `bissectrice-devant` | coin (44 − carrure devant/2 ; y emmanchure) + **2,5 cm** à 45° vers le haut-côté : −2,5·√2/2 en x, −2,5·√2/2 en y | (25,73 ; 18,73) |
-| 12 | `platitude-devant` | (x côté + 1 ; y emmanchure) | (22 ; 20,5) |
-| 13 | Emmanchure devant | spline 9-10-11-12 → `dessous-bras` (21 ; 20,5), arrivée forcée horizontale | longueur mesurée 21,61 |
+| 12 | `platitude-devant` | **repère** à (x côté + 1 ; y emmanchure) — même rôle qu'au dos | (22 ; 20,5) |
+| 13 | Emmanchure devant | spline 9-10-11 avec tangente imposée à 45° à la bissectrice, puis une seule cubique 11 → `dessous-bras` (21 ; 20,5), raccord C1, arrivée horizontale | longueur mesurée 21,54 |
 | 14 | Pince devant | axe vertical **par le saillant** ; sommet à 2 cm **sous** le saillant ⚠ transcription ; jambes ± valeur/2 sur la taille | sommet (35 ; 25) |
 | 15 | Côté devant | droite de `dessous-bras` à (x côté + pince de côté ; y taille) | → (23 ; 41) |
 
@@ -135,7 +135,8 @@ pince demi-dos 2 → platitude 3. Constante : `PLATITUDE_PINCE`.
 
 | Courbe | Méthode | Contraintes |
 |---|---|---|
-| Emmanchures | spline **Catmull-Rom** passant exactement par les points imposés, convertie en Béziers cubiques ; coefficient de tangente k = (1 − tension)/6 | tension par courbe dans `METHOD.TENSION` (0 = arrondi maximal, actuellement 0 partout) ; dernier segment redressé horizontal (platitude) |
+| Emmanchures (haut) | spline **Catmull-Rom** épaule → carrure → bissectrice, convertie en Béziers cubiques ; coefficient de tangente k = (1 − tension)/6 ; **direction de tangente imposable par point** (l'amplitude Catmull-Rom est conservée) | tension par courbe dans `METHOD.TENSION` (0 = arrondi maximal, actuellement 0 partout) ; tangente à **45°** imposée au point de bissectrice (`TANGENTE_BISSECTRICE_DEG`) |
+| Emmanchures (virage) | **une seule cubique** bissectrice → dessous-bras, à courbure continue (coup de perroquet, aucune jonction) ; poignée de départ m1 = min(poignée de la spline, valeur de bissectrice, corde/3), poignée d'arrivée horizontale m2 = **corde/2** | raccord **C1** avec la spline (même poignée de part et d'autre de la bissectrice) ; jamais sous la ligne d'emmanchure ; queue léchant la ligne au repère de platitude (≤ 1,2 mm sur le profil démo), arrivée exactement horizontale |
 | Encolures | Bézier cubique unique (forme de Hermite) : point + tangente à chaque bout, tangentes d'amplitude = longueur de la corde | dos : horizontale à la nuque, ⊥ à l'épaule à l'arrivée ; devant : horizontale à la gorge, verticale au point d'épaule |
 | Longueur d'arc | échantillonnage 128 points par Bézier | précision ≈ 0,01 cm — c'est la mesure utilisée pour l'emmanchure de la manche (M5) |
 
@@ -160,13 +161,15 @@ pince demi-dos 2 → platitude 3. Constante : `PLATITUDE_PINCE`.
 | Rotation pince bretelle | seuls seconde moitié d'épaule et extrémité pivotent ; carrure/bissectrice/dessous-bras fixes | choix documenté (D6) ; le livre ferme la pince avant de tracer l'emmanchure |
 | Platitude des pinces | formule 5 − valeur bornée 2..4 | le livre donne la proportion en mots, pas en formule |
 | Tension des splines | 0 partout | à ajuster visuellement contre les planches (p. 42 : seul le point de bissectrice peut bouger) |
+| Poignées du virage d'emmanchure | m1 borné (spline / bissectrice / corde÷3), m2 = corde/2 | chiffres calibrés visuellement sur les planches (validé livre en main 2026-07-07), pas donnés par le livre — verrouillés par les golden tests (tenue à mi-virage, queue au repère) |
 
 ## 11. Carte des constantes (`src/engine/method.ts`)
 
 `ANGLE_EPAULE_DOS` 18° · `ANGLE_EPAULE_DEVANT` 26° · `ENCOLURE_*` (formules §3) ·
 `ARRONDI_AFFICHAGE` · `LIGNE_EMMANCHURE` /2 · `LIGNE_CARRURE` /3 ·
 `DEMI_LARGEUR_AJUSTEMENT` 1 · `BISSECTRICE_EMMANCHURE_DOS` 1,5 ·
-`BISSECTRICE_EMMANCHURE_DEVANT` 2,5 · `PLATITUDE_EMMANCHURE` 1 ·
+`BISSECTRICE_EMMANCHURE_DEVANT` 2,5 · `PLATITUDE_EMMANCHURE` 1 (repère) ·
+`TANGENTE_BISSECTRICE_DEG` 45 ·
 `PINCE_BRETELLE` P/20+1 · `EMBU_EPAULE_DOS` 1 · `RETRAIT_SOMMET_PINCE_DEVANT` 2 ·
 `RETRAIT_SOMMET_PINCE_DOS` 2 · plafonds §7 · `PLATITUDE_PINCE` ·
 `TENSION.emmanchureDos/Devant` 0 · `ECART_PIECES` 5 (dans `layout.ts`).

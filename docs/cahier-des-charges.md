@@ -118,7 +118,9 @@ add, sub, scale, dist, lerp            // vecteurs
 polar(origin, angleDeg, length)        // point à angle/distance — sert pour les 18°/26°
 perpFoot, project                      // projections
 intersectLines(a1, a2, b1, b2)
-splineThrough(points, tension): Curve  // Catmull-Rom → cubiques, pour emmanchures/encolures
+splineThrough(points, tension, tangentes?): Curve  // Catmull-Rom → cubiques ; directions de tangente imposables par point
+hermite(p0, t0, p1, t1): Curve         // cubique par points + tangentes — encolures, virages à courbure continue
+concatCurves(...curves): Curve         // assemble des courbes contiguës (ex. spline + virage d'emmanchure)
 curveLength(curve): number             // longueur d'arc — INDISPENSABLE pour la manche
 pointAtLength(curve, s): Pt            // repères de montage, crans
 ```
