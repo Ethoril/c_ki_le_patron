@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { generate } from "../src/engine/generate";
 import { draftBuste } from "../src/engine/pieces/buste";
-import { layoutPieces, translatePiece, ECART_PIECES } from "../src/engine/layout";
+import { translatePiece, ECART_PIECES } from "../src/engine/layout";
 import { DEMO_MEASUREMENTS } from "../src/engine/measurements";
 import { boundingBox } from "../src/engine/geometry/path";
 import { curveLength } from "../src/engine/geometry/curve";
