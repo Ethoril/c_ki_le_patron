@@ -14,21 +14,31 @@ export type Curve = { beziers: CubicBezier[] };
  * Spline Catmull-Rom centripète-uniforme passant par tous les `points`,
  * convertie en cubiques de Bézier. `tension` ∈ [0..1] : 0 = très arrondie,
  * 1 = quasi polyligne. Les tensions par courbe vivent dans method.ts (§4.4).
+ *
+ * `tangentes` (optionnel, creux) impose la DIRECTION de la tangente au point
+ * de même indice — l'amplitude Catmull-Rom est conservée, seule l'orientation
+ * change. Sert aux passages obligés de la méthode (ex. emmanchure
+ * perpendiculaire à la bissectrice, arrivée plate sur la platitude).
  */
-export function splineThrough(points: Pt[], tension = 0): Curve {
+export function splineThrough(points: Pt[], tension = 0, tangentes?: (Pt | undefined)[]): Curve {
   if (points.length < 2) throw new Error("splineThrough: il faut au moins 2 points");
+  const T: Pt[] = points.map((p, i) => {
+    const prev = points[i - 1] ?? p;
+    const next = points[i + 1] ?? p;
+    const t = scale(sub(next, prev), (1 - tension) / 2);
+    const dir = tangentes?.[i];
+    if (!dir) return t;
+    const n = Math.hypot(dir.x, dir.y);
+    if (n < 1e-9) throw new Error(`splineThrough: tangente imposée nulle au point ${i}`);
+    return scale(dir, Math.hypot(t.x, t.y) / n);
+  });
   const beziers: CubicBezier[] = [];
-  const k = (1 - tension) / 6;
   for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i - 1] ?? points[i];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[i + 2] ?? points[i + 1];
     beziers.push({
-      p0: p1,
-      c1: add(p1, scale(sub(p2, p0), k)),
-      c2: sub(p2, scale(sub(p3, p1), k)),
-      p1: p2,
+      p0: points[i],
+      c1: add(points[i], scale(T[i], 1 / 3)),
+      c2: sub(points[i + 1], scale(T[i + 1], 1 / 3)),
+      p1: points[i + 1],
     });
   }
   return { beziers };
@@ -39,6 +49,18 @@ export function hermite(p0: Pt, t0: Pt, p1: Pt, t1: Pt): Curve {
   return {
     beziers: [{ p0, c1: add(p0, scale(t0, 1 / 3)), c2: sub(p1, scale(t1, 1 / 3)), p1 }],
   };
+}
+
+/** Concatène des courbes contiguës (l'arrivée de chacune = le départ de la suivante). */
+export function concatCurves(...curves: Curve[]): Curve {
+  const beziers: CubicBezier[] = [];
+  for (const c of curves) {
+    if (beziers.length > 0 && dist(beziers[beziers.length - 1].p1, c.beziers[0].p0) > 1e-6) {
+      throw new Error("concatCurves: courbes non contiguës");
+    }
+    beziers.push(...c.beziers);
+  }
+  return { beziers };
 }
 
 export function bezierPointAt(b: CubicBezier, t: number): Pt {

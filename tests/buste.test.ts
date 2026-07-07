@@ -13,7 +13,7 @@ import { DEMO_MEASUREMENTS, checkCoherence, validateBounds } from "../src/engine
 import { repartirPincesTaille, METHOD } from "../src/engine/method";
 import { generate } from "../src/engine/generate";
 import { dist } from "../src/engine/geometry/point";
-import { curveLength } from "../src/engine/geometry/curve";
+import { curveLength, curveToPolyline } from "../src/engine/geometry/curve";
 import { isClosed } from "../src/engine/geometry/path";
 
 const demo = DEMO_MEASUREMENTS;
@@ -134,6 +134,72 @@ describe("golden : points de construction du profil démo (v2)", () => {
     expect(isClosed(dos.outline, 1e-6)).toBe(true);
     expect(isClosed(devant.outline, 1e-6)).toBe(true);
   });
+});
+
+describe("golden : allure du bas d'emmanchure (p. 42-44, note §6/D7)", () => {
+  const { dos, devant } = draftBuste(demo);
+  // spline épaule → carrure → bissectrice, puis UNE cubique bissectrice →
+  // dessous-bras : beziers[2] est tout le virage, sans jonction intermédiaire
+  const cas = [
+    { nom: "dos", piece: dos, sens: 1 },
+    { nom: "devant", piece: devant, sens: -1 },
+  ] as const;
+
+  for (const { nom, piece, sens } of cas) {
+    const c = piece.curves["emmanchure"];
+
+    it(`${nom} : la courbe coupe la bissectrice à angle droit (tangente à 45°)`, () => {
+      const b = c.beziers[2];
+      expect(b.p0).toEqual(piece.points[`bissectrice-${nom}`]);
+      const t = { x: b.c1.x - b.p0.x, y: b.c1.y - b.p0.y };
+      const attendu = (METHOD.TANGENTE_BISSECTRICE_DEG * Math.PI) / 180;
+      expect(Math.atan2(t.y, sens * t.x)).toBeCloseTo(attendu, 9);
+    });
+
+    it(`${nom} : un seul balayage bissectrice → côté, arrivée exactement horizontale`, () => {
+      const b = c.beziers[c.beziers.length - 1];
+      expect(b.p0).toEqual(piece.points[`bissectrice-${nom}`]);
+      expect(b.p1).toEqual(piece.points["dessous-bras"]);
+      expect(b.c2.y).toBeCloseTo(piece.points["dessous-bras"].y, 9); // tangente d'arrivée horizontale
+    });
+
+    it(`${nom} : raccord C1 à la bissectrice (même poignée de part et d'autre)`, () => {
+      // pas de saut de courbure perceptible : direction ET vitesse continues
+      const avant = c.beziers[1];
+      const apres = c.beziers[2];
+      expect(apres.p0.x - avant.c2.x).toBeCloseTo(apres.c1.x - apres.p0.x, 9);
+      expect(apres.p0.y - avant.c2.y).toBeCloseTo(apres.c1.y - apres.p0.y, 9);
+    });
+
+    it(`${nom} : la queue du virage lèche la ligne au repère de platitude (≤ 1,2 mm)`, () => {
+      const repere = piece.points[`platitude-${nom}`];
+      const poly = curveToPolyline(c, 256);
+      const ecart = Math.min(...poly.map((p) => dist(p, repere)));
+      expect(ecart).toBeLessThan(0.12);
+    });
+
+    it(`${nom} : le virage tient sa hauteur (≥ 0,35 cm au-dessus de la ligne à mi-chemin)`, () => {
+      // anti-affaissement : la courbe ne doit pas retomber sur la ligne dès la
+      // bissectrice (l'effet « écrasé » des premières versions)
+      const bis = piece.points[`bissectrice-${nom}`];
+      const repere = piece.points[`platitude-${nom}`];
+      const yLigne = piece.points["dessous-bras"].y;
+      const xMi = (bis.x + repere.x) / 2;
+      const poly = curveToPolyline(c, 256);
+      for (let i = 1; i < poly.length; i++) {
+        if ((poly[i - 1].x - xMi) * (poly[i].x - xMi) <= 0 && poly[i].y > bis.y) {
+          expect(yLigne - (poly[i - 1].y + poly[i].y) / 2).toBeGreaterThan(0.35);
+        }
+      }
+    });
+
+    it(`${nom} : la courbe ne plonge jamais sous la ligne d'emmanchure (pas de ventre avant le coin)`, () => {
+      // régression : l'ancienne tangente Catmull-Rom (trop raide au point de
+      // bissectrice) faisait passer le dos SOUS la ligne, d'où l'arrivée écrasée
+      const yLigne = piece.points["dessous-bras"].y;
+      for (const p of curveToPolyline(c, 128)) expect(p.y).toBeLessThanOrEqual(yLigne + 1e-9);
+    });
+  }
 });
 
 describe("répartition des pinces de taille : cas extrêmes (fonction pure)", () => {
