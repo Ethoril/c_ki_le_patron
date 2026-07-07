@@ -257,6 +257,11 @@ portée au patron.
 
 ## Choix documentés de la v1 (cahier §4.4)
 
+- Mise en planche (`engine/layout.ts`) : après construction, le devant est
+  écarté du dos d'un blanc calculé (≥ 5 cm entre boîtes englobantes) pour
+  qu'aucun chevauchement ne soit possible — équivalent du blanc de 10-15 cm
+  des planches du livre (p. 35). Les coordonnées de construction du gabarit
+  (côtés coïncidents) restent celles du livre dans `pieces/buste.ts`.
 - Buste arrêté à la taille ; le livre poursuit le gabarit jusqu'au bassin
   (largeurs bassin/4 ∓ 1, pinces prolongées 9/11 cm sous la taille, pince de
   côté arrondie finissant aux petites hanches, p. 61). Reporté au jalon

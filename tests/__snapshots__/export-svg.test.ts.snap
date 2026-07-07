@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`export SVG 1:1 > snapshot du tracé du profil démo 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="50cm" height="57cm" viewBox="0 0 50 57" font-family="sans-serif">
+"<svg xmlns="http://www.w3.org/2000/svg" width="55cm" height="57cm" viewBox="0 0 55 57" font-family="sans-serif">
 <g transform="translate(3 6)">
 <line x1="0" y1="0" x2="0" y2="41" stroke="#dc2626" stroke-width="0.05"/>
 <line x1="0" y1="41" x2="21" y2="41" stroke="#dc2626" stroke-width="0.05"/>
@@ -9,14 +9,14 @@ exports[`export SVG 1:1 > snapshot du tracé du profil démo 1`] = `
 <path d="M 9 41 L 9 39.5 L 10 18.5 L 11 39.5 L 11 41" fill="none" stroke="black" stroke-width="0.05"/>
 <line x1="4" y1="24.5" x2="4" y2="38" stroke="black" stroke-width="0.05"/>
 <text x="8" y="35" font-size="1.4" font-weight="bold" text-anchor="middle" fill="black">DOS</text>
-<line x1="44" y1="-3" x2="44" y2="41" stroke="#dc2626" stroke-width="0.05"/>
-<line x1="21" y1="41" x2="44" y2="41" stroke="#dc2626" stroke-width="0.05"/>
-<path d="M 21 20.5 L 23 41 L 44 41 L 44 6.333 C 40.043 6.333 36.667 0.957 36.667 -3 L 31.274 -0.37 L 26.073 1.083 L 21.417 4.868 C 22.431 6.334 26.781 11.356 27.5 13.667 C 28.219 15.977 26.649 17.593 25.732 18.732 C 24.816 19.871 22.842 20.5 22 20.5 C 21.667 20.5 21.333 20.5 21 20.5 Z" fill="none" stroke="black" stroke-width="0.08"/>
-<path d="M 33.5 41 L 33.5 40 L 35 25 L 36.5 40 L 36.5 41" fill="none" stroke="black" stroke-width="0.05"/>
-<path d="M 31.27390238887166 -0.36977311926553647 L 35 23 L 26.07308665910454 1.0833324326496871" fill="none" stroke="black" stroke-width="0.05"/>
-<circle cx="35" cy="23" r="0.15" fill="black"/>
-<line x1="40" y1="27" x2="40" y2="38" stroke="black" stroke-width="0.05"/>
-<text x="36" y="35" font-size="1.4" font-weight="bold" text-anchor="middle" fill="black">DEVANT</text>
+<line x1="49" y1="-3" x2="49" y2="41" stroke="#dc2626" stroke-width="0.05"/>
+<line x1="26" y1="41" x2="49" y2="41" stroke="#dc2626" stroke-width="0.05"/>
+<path d="M 26 20.5 L 28 41 L 49 41 L 49 6.333 C 45.043 6.333 41.667 0.957 41.667 -3 L 36.274 -0.37 L 31.073 1.083 L 26.417 4.868 C 27.431 6.334 31.781 11.356 32.5 13.667 C 33.219 15.977 31.649 17.593 30.732 18.732 C 29.816 19.871 27.842 20.5 27 20.5 C 26.667 20.5 26.333 20.5 26 20.5 Z" fill="none" stroke="black" stroke-width="0.08"/>
+<path d="M 38.5 41 L 38.5 40 L 40 25 L 41.5 40 L 41.5 41" fill="none" stroke="black" stroke-width="0.05"/>
+<path d="M 36.27390238887166 -0.36977311926553647 L 40 23 L 31.07308665910454 1.0833324326496871" fill="none" stroke="black" stroke-width="0.05"/>
+<circle cx="40" cy="23" r="0.15" fill="black"/>
+<line x1="45" y1="27" x2="45" y2="38" stroke="black" stroke-width="0.05"/>
+<text x="41" y="35" font-size="1.4" font-weight="bold" text-anchor="middle" fill="black">DEVANT</text>
 </g>
 <rect x="3" y="50.5" width="5" height="5" fill="none" stroke="black" stroke-width="0.05"/>
 <text x="5.5" y="56.7" font-size="0.9" text-anchor="middle">carré de contrôle 5 cm</text>
