@@ -43,6 +43,13 @@ function randomBody(rnd: () => number): Measurements {
     longueurEpaule: half(range(11.5, 15)),
   };
   m.longueurDevant = half(m.longueurDos + range(1.5, 5));
+  // extensions optionnelles (buste.md §Extensions hors livre) : présentes une
+  // fois sur deux — les invariants doivent tenir avec ET sans
+  if (rnd() < 0.5) m.aisance = half(range(0, 5));
+  if (rnd() < 0.5) {
+    // pente plausible : angle entre 12° et 32°, jamais au plafond de 45°
+    m.penteEpaule = half(m.longueurEpaule * Math.sin((range(12, 32) * Math.PI) / 180));
+  }
   return m;
 }
 
@@ -74,6 +81,10 @@ describe("invariants sur 200 mensurations plausibles", () => {
         dist(devant.points["pince-bretelle-2"], devant.points["epaule-devant"]);
       expect(epauleDos).toBeCloseTo(m.longueurEpaule, 6);
       expect(epauleDevant).toBeCloseTo(m.longueurEpaule - METHOD.EMBU_EPAULE_DOS, 6);
+      // pente mesurée → le dénivelé vertical de l'épaule dos est la mesure
+      if (m.penteEpaule !== undefined) {
+        expect(dos.points["epaule-dos"].y - dos.points["snp-dos"].y).toBeCloseTo(m.penteEpaule, 6);
+      }
     }
   });
 
@@ -89,18 +100,19 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("largeur à la taille = taille/4 ∓ 1, aux excédents signalés près", () => {
+  it("largeur à la taille = (taille + aisance)/4 ∓ 1, aux excédents signalés près", () => {
     for (const m of bodies) {
       const { dos, devant, report } = draftBuste(m);
       const get = (k: string) => report.values.find((v) => v.key === k)!.value;
+      const tailleAisee = m.tourTaille + (m.aisance ?? 0);
       const U = Math.max(0, (m.tourPoitrine - m.tourTaille) / 4);
       const excedentDos = U - get("cote") - get("pinceDemiDos") - get("milieuDos");
       const excedentDevant = U - get("cote") - get("pinceDevant");
       const dosLargeur = dos.points["taille-cote-dos"].x - dos.points["taille-milieu-dos"].x - get("pinceDemiDos");
       const devantLargeur =
         devant.points["taille-milieu-devant"].x - devant.points["taille-cote-devant"].x - get("pinceDevant");
-      expect(dosLargeur).toBeCloseTo(m.tourTaille / 4 - 1 + Math.max(0, excedentDos), 6);
-      expect(devantLargeur).toBeCloseTo(m.tourTaille / 4 + 1 + Math.max(0, excedentDevant), 6);
+      expect(dosLargeur).toBeCloseTo(tailleAisee / 4 - 1 + Math.max(0, excedentDos), 6);
+      expect(devantLargeur).toBeCloseTo(tailleAisee / 4 + 1 + Math.max(0, excedentDevant), 6);
     }
   });
 
@@ -143,12 +155,13 @@ describe("invariants sur 200 mensurations plausibles", () => {
         }
         const poly = curveToPolyline(piece.curves["emmanchure"], 64);
         // le repère de platitude n'est pas un point de passage exact : la
-        // queue du balayage vient lécher la ligne à son niveau (≤ 2,5 mm sur
-        // les mensurations extrêmes ; le profil démo est testé à ≤ 1,2 mm —
-        // la priorité est la tenue du virage, cf. golden anti-affaissement)
+        // queue du balayage vient lécher la ligne à son niveau (≤ 3,5 mm sur
+        // les mensurations extrêmes, l'aisance pouvant élargir le coin ; le
+        // profil démo est testé à ≤ 1,2 mm — la priorité est la tenue du
+        // virage, cf. golden anti-affaissement)
         const repere = piece.points[repereId];
         const ecart = Math.min(...poly.map((p) => dist(p, repere)));
-        expect(ecart, `${piece.id} queue au repère de platitude`).toBeLessThan(0.25);
+        expect(ecart, `${piece.id} queue au repère de platitude`).toBeLessThan(0.35);
         const t = endTangent(piece.curves["emmanchure"]);
         expect(Math.abs(t.y), `${piece.id} arrivée plate`).toBeLessThan(1e-6);
         // jamais de ventre sous la ligne d'emmanchure (note buste.md §6/D7) ;

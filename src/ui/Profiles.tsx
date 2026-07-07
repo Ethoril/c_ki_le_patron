@@ -29,7 +29,12 @@ export function Profiles() {
       const incoming: Record<string, Measurements> = data.profils ?? data;
       let count = 0;
       for (const [n, m] of Object.entries(incoming)) {
-        if (MEASUREMENT_FIELDS.every((f) => typeof (m as Measurements)[f.key] === "number")) {
+        // les champs optionnels (aisance, pente d'épaule) peuvent manquer des exports anciens
+        const valide = MEASUREMENT_FIELDS.every((f) => {
+          const v = (m as Measurements)[f.key];
+          return typeof v === "number" || (f.optional && v === undefined);
+        });
+        if (valide) {
           useStore.setState((s) => ({ profiles: { ...s.profiles, [n]: m } }));
           count++;
         }

@@ -9,6 +9,7 @@ import type { PatternPiece } from "../engine/types";
 import type { Measurements } from "../engine/measurements";
 import { boundingBox, toSvgPath } from "../engine/geometry/path";
 import { dartOutline } from "../engine/drafting";
+import { cartoucheLignes } from "./cartouche";
 
 const MARGE = 3; // cm autour du tracé
 const CARTOUCHE_H = 7; // cm réservés sous le tracé
@@ -82,10 +83,7 @@ export function buildExportSvg(pieces: PatternPiece[], m: Measurements, date: Da
   const cx = MARGE + CARRE_CONTROLE + 3;
   const lignes = [
     `Patron de base — ${pieces.map((p) => p.title).join(" + ")}`,
-    `Généré le ${date.toLocaleDateString("fr-FR")} — échelle 1:1 — SANS valeurs de couture ni aisance`,
-    `Poitrine ${m.tourPoitrine} · Taille ${m.tourTaille} · Bassin ${m.tourBassin} · Cou ${m.tourCou}`,
-    `Long. dos ${m.longueurDos} · Long. devant ${m.longueurDevant} · Carrure dos ${m.carrureDos} · Carrure devant ${m.carrureDevant}`,
-    `Épaule ${m.longueurEpaule} · Haut. poitrine ${m.hauteurPoitrine} · Écart poitrine ${m.ecartPoitrine} (cm)`,
+    ...cartoucheLignes(m, date),
   ];
   lignes.forEach((t, i) => {
     parts.push(

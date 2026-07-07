@@ -16,12 +16,14 @@ import { dist } from "../src/engine/geometry/point";
 import { curveLength, curveToPolyline } from "../src/engine/geometry/curve";
 import { isClosed } from "../src/engine/geometry/path";
 
-const demo = DEMO_MEASUREMENTS;
+// Les exemples chiffrés du livre supposent le patron de base SANS aisance ;
+// le profil de démonstration porte l'aisance produit par défaut (2 cm).
+const demo = { ...DEMO_MEASUREMENTS, aisance: 0 };
 
 describe("profil de démonstration", () => {
   it("passe les bornes et la cohérence sans avertissement", () => {
-    expect(validateBounds(demo)).toEqual([]);
-    expect(checkCoherence(demo)).toEqual([]);
+    expect(validateBounds(DEMO_MEASUREMENTS)).toEqual([]);
+    expect(checkCoherence(DEMO_MEASUREMENTS)).toEqual([]);
   });
 });
 
@@ -200,6 +202,92 @@ describe("golden : allure du bas d'emmanchure (p. 42-44, note §6/D7)", () => {
       for (const p of curveToPolyline(c, 128)) expect(p.y).toBeLessThanOrEqual(yLigne + 1e-9);
     });
   }
+});
+
+describe("golden : pointe de la pince devant (choix du 2026-07-07)", () => {
+  it("sommet à 4 cm sous le saillant — jamais sur le saillant", () => {
+    expect(METHOD.RETRAIT_SOMMET_PINCE_DEVANT).toBe(4);
+    const { devant } = draftBuste(demo);
+    const pince = devant.darts.find((d) => d.id === "pince-taille-devant")!;
+    expect(pince.apex.x).toBeCloseTo(devant.points["saillant"].x, 6);
+    expect(pince.apex.y - devant.points["saillant"].y).toBeCloseTo(4, 6);
+  });
+});
+
+describe("extension : aisance globale (buste.md §Extensions hors livre)", () => {
+  const avec = draftBuste({ ...demo, aisance: 2 });
+
+  it("élargit les tours : côté à (poitrine + aisance)/4 − 1, milieu devant à (poitrine + aisance)/2", () => {
+    expect(avec.dos.points["dessous-bras"].x).toBeCloseTo((88 + 2) / 4 - 1, 6);
+    expect(avec.devant.points["taille-milieu-devant"].x).toBeCloseTo((88 + 2) / 2, 6);
+  });
+
+  it("U et la répartition des pinces ne bougent pas (même aisance aux deux tours)", () => {
+    expect(reportValue(avec.report, "aAbsorberHaut")).toBe(5);
+    expect(reportValue(avec.report, "cote")).toBe(2);
+    expect(reportValue(avec.report, "pinceDevant")).toBe(3);
+  });
+
+  it("largeur à la taille après pinces = (taille + aisance)/4 ∓ 1", () => {
+    const dosLargeur = avec.dos.points["taille-cote-dos"].x - avec.dos.points["taille-milieu-dos"].x - 2;
+    const devantLargeur =
+      avec.devant.points["taille-milieu-devant"].x - avec.devant.points["taille-cote-devant"].x - 3;
+    expect(dosLargeur).toBeCloseTo((68 + 2) / 4 - 1, 6);
+    expect(devantLargeur).toBeCloseTo((68 + 2) / 4 + 1, 6);
+  });
+
+  it("les mesures du corps ne sont jamais élargies : encolure, carrure, pince bretelle", () => {
+    expect(reportValue(avec.report, "largeurEncolure")).toBeCloseTo(38 / 6 + 1, 6);
+    expect(avec.dos.points["carrure-dos"].x).toBeCloseTo(35 / 2, 6);
+    expect(reportValue(avec.report, "pinceBretelle")).toBeCloseTo(5.4, 6);
+  });
+
+  it("aisance absente (ancien profil) = aisance 0 = tracé du livre au point près", () => {
+    const reference = draftBuste(demo);
+    const absente = draftBuste({ ...demo, aisance: undefined });
+    for (const [id, p] of Object.entries(reference.dos.points)) {
+      expect(absente.dos.points[id]).toEqual(p);
+    }
+    for (const [id, p] of Object.entries(reference.devant.points)) {
+      expect(absente.devant.points[id]).toEqual(p);
+    }
+  });
+});
+
+describe("extension : pente d'épaule mesurée (buste.md §Extensions hors livre)", () => {
+  it("non renseignée : angles du livre 18°/26° au rapport", () => {
+    const { report } = draftBuste(demo);
+    expect(reportValue(report, "angleEpauleDos")).toBe(18);
+    expect(reportValue(report, "angleEpauleDevant")).toBe(26);
+  });
+
+  it("pente = épaule × sin(18°) → tracé identique au défaut", () => {
+    const reference = draftBuste(demo);
+    const avec = draftBuste({ ...demo, penteEpaule: 13 * Math.sin((18 * Math.PI) / 180) });
+    expect(avec.dos.points["epaule-dos"].x).toBeCloseTo(reference.dos.points["epaule-dos"].x, 9);
+    expect(avec.dos.points["epaule-dos"].y).toBeCloseTo(reference.dos.points["epaule-dos"].y, 9);
+    expect(avec.devant.points["epaule-devant"].x).toBeCloseTo(reference.devant.points["epaule-devant"].x, 9);
+    expect(avec.devant.points["epaule-devant"].y).toBeCloseTo(reference.devant.points["epaule-devant"].y, 9);
+  });
+
+  it("pente 5 : dénivelé d'épaule dos = 5 cm exactement, devant = angle dos + 8°", () => {
+    const avec = draftBuste({ ...demo, penteEpaule: 5 });
+    expect(avec.dos.points["epaule-dos"].y).toBeCloseTo(5, 6);
+    const angleDos = (Math.asin(5 / 13) * 180) / Math.PI;
+    expect(reportValue(avec.report, "angleEpauleDos")).toBeCloseTo(angleDos, 6);
+    expect(reportValue(avec.report, "angleEpauleDevant")).toBeCloseTo(angleDos + 8, 6);
+    // l'angle devant se lit sur la première moitié d'épaule (non pivotée)
+    const snp = avec.devant.points["snp-devant"];
+    const pb1 = avec.devant.points["pince-bretelle-1"];
+    const mesure = (Math.atan2(pb1.y - snp.y, snp.x - pb1.x) * 180) / Math.PI;
+    expect(mesure).toBeCloseTo(angleDos + 8, 6);
+  });
+
+  it("pente incohérente avec la longueur d'épaule : plafonnée à 45°, avertissement émis", () => {
+    const avec = draftBuste({ ...demo, penteEpaule: 12 });
+    expect(reportValue(avec.report, "angleEpauleDos")).toBeCloseTo(45, 6);
+    expect(avec.report.warnings.some((w) => w.code === "pente-epaule-plafonnee")).toBe(true);
+  });
 });
 
 describe("répartition des pinces de taille : cas extrêmes (fonction pure)", () => {
