@@ -98,12 +98,12 @@ export const METHOD = {
   PINCE_EPAULE_DOS_LONGUEUR: 7,
 
   /**
-   * Platitude de poitrine : ≈ 2 cm entre le saillant et l'extrémité de
-   * chaque pince qui y converge (bretelle, taille), pour éviter le bec de
-   * poitrine ; à ajuster à l'essayage selon le volume (p. 75). Sert de
-   * retrait de pointe à la pince de taille devant (C15 — décision du
-   * 2026-07-15 : valeur du livre, remplace les 4 cm d'origine tierce).
-   * [À VALIDER à l'essayage]
+   * Platitude de poitrine — consigne de MONTAGE, non dessinée (C15
+   * re-tranché le 2026-07-15) : sur le tracé, bretelle et pince de taille
+   * forment une ligne continue interrompue par la croix du saillant
+   * (planches p. 55 et 68) ; à l'épinglage de la toile, on s'arrête à
+   * ≈ 2 cm de l'extrémité de chaque pince pour éviter le bec de poitrine,
+   * valeur ajustée à l'essayage selon le volume (p. 75).
    */
   PLATITUDE_POITRINE: 2,
   /**
@@ -113,6 +113,28 @@ export const METHOD = {
    * au-dessus (C20 — décision du 2026-07-15). [À VALIDER à l'essayage]
    */
   SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE: 0,
+
+  /**
+   * Hauteur de bassin standard (taille → bassin) quand la mesure n'est pas
+   * relevée : 20 cm — moyenne appliquée par la majorité des modélistes, la
+   * FDA situant la hauteur de bassin entre 17 et 23 cm quelle que soit la
+   * stature (generalites.md §6, p. 24).
+   */
+  HAUTEUR_BASSIN_STANDARD: 20,
+  /** Petites hanches : ligne d'aide à mi-distance taille ↔ bassin (p. 24, 36). */
+  PETITES_HANCHES_FRACTION: 0.5,
+  /** Longueur de la pince du devant sous la taille : 9 cm (plafond p. 55). */
+  LONGUEUR_PINCE_DEVANT_SOUS_TAILLE: 9,
+  /** Longueur de la pince du demi-dos sous la taille : 11 cm (plafond p. 55). */
+  LONGUEUR_PINCE_DEMI_DOS_SOUS_TAILLE: 11,
+  /**
+   * Jonction de la couture de côté basse avec la ligne de côté basse : SOUS
+   * la ligne des petites hanches, par une courbe aplatie (p. 61-62,
+   * fig. 7-8 ; la fig. 9 barrée revient sur la ligne trop haut, au niveau
+   * des petites hanches). En fraction de la hauteur de bassin sous la
+   * taille. [transcription : mi-distance petites hanches ↔ bassin]
+   */
+  JONCTION_COTE_BAS_FRACTION: 0.75,
 
   /** Plafonds de répartition des pinces de taille (p. 55). */
   PLAFOND_PINCE_DEVANT: 3,

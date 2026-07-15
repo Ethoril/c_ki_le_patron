@@ -13,6 +13,12 @@ export type Dart = {
   legs: [Pt, Pt];
   /** Sommet (pointe) de la pince. */
   apex: Pt;
+  /**
+   * Sommet bas des pinces de taille en losange, prolongées sous la taille
+   * (p. 55 : devant 9 cm, demi-dos 11 cm sous la taille). Absent pour les
+   * pinces à sommet unique (bretelle).
+   */
+  apexBas?: Pt;
   /** Axe de la pince (du milieu des jambes vers le sommet). */
   axis: [Pt, Pt];
   /** Valeur absorbée en cm (écart entre les jambes). */

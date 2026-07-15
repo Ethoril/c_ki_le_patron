@@ -73,6 +73,20 @@ function courbeEncolureDevant(
  * dernier centimètre n'est pas un segment à la règle : comme la queue du
  * perroquet, il est quasi droit (écart au repère ≲ 1 mm, un trait de crayon).
  */
+/**
+ * Couture de côté basse (p. 61-62, fig. 7-8) : presque droite à la taille —
+ * départ vertical dans l'axe de la platitude de côté —, courbe APLATIE qui
+ * rejoint la ligne de côté basse à la jonction (SOUS les petites hanches),
+ * tangente à la ligne (arrivée verticale). Une seule cubique, tangentes
+ * verticales d'amplitude = chute : x est monotone du départ à la jonction,
+ * jamais de S ni de retour sur la ligne au-dessus de la jonction (la fig. 9
+ * barrée du livre).
+ */
+function courbeCoteBasse(depart: Pt, jonction: Pt): Curve {
+  const chute = jonction.y - depart.y;
+  return hermite(depart, pt(0, chute), jonction, pt(0, chute));
+}
+
 function courbeEmmanchure(
   epaule: Pt,
   carrure: Pt,
@@ -112,6 +126,9 @@ export function draftBuste(m: Measurements): BusteResult {
   // corps : la même aisance s'ajoute à la poitrine et à la taille.
   const aisance = m.aisance ?? 0;
   const poitrineAisee = m.tourPoitrine + aisance;
+  const bassinAisee = m.tourBassin + aisance;
+  // hauteur de bassin : mesurée, ou standard de la méthode (generalites §6)
+  const hauteurBassin = m.hauteurBassin ?? METHOD.HAUTEUR_BASSIN_STANDARD;
 
   // ——— Angles d'épaule : 18°/26° du livre, ou déduits de la pente mesurée
   const angles = anglesEpaule(m.longueurEpaule, m.penteEpaule);
@@ -129,11 +146,26 @@ export function draftBuste(m: Measurements): BusteResult {
   const yCarrure = METHOD.LIGNE_CARRURE(m.longueurDos); // C4 : longueur dos / 3
   // C5 : largeurs ∓ 1 — les deux lignes de côté coïncident dans le repère miroir
   const xCote = poitrineAisee / 4 - METHOD.DEMI_LARGEUR_AJUSTEMENT;
+  // ——— Bas du gabarit (p. 33 ét. 4-5, generalites §6) : bassin et petites hanches
+  const yBassin = yTaille + hauteurBassin;
+  const yPetitesHanches = yTaille + hauteurBassin * METHOD.PETITES_HANCHES_FRACTION;
+  // jonction de la couture de côté basse avec la ligne de côté basse (p. 61-62)
+  const yJonctionCote = yTaille + hauteurBassin * METHOD.JONCTION_COTE_BAS_FRACTION;
+  const xCoteBasDos = bassinAisee / 4 - METHOD.DEMI_LARGEUR_AJUSTEMENT;
 
   // ——— Répartition des pinces de taille (p. 54-58) — côté commun aux deux pièces
   const aAbsorberHaut = Math.max(0, (m.tourPoitrine - m.tourTaille) / 4);
   const aAbsorberBas = Math.max(0, (m.tourBassin - m.tourTaille) / 4);
   const rep = repartirPincesTaille(aAbsorberHaut);
+  // Côté bas émergent (p. 57 « À retenir », lecture moteur de buste.md) : les
+  // bouches de pinces à la taille sont fixées par le calcul HAUT ; en partie
+  // basse, milieu dos, demi-dos et devant reprennent leurs valeurs et la
+  // pince de côté basse absorbe le reste de U_bas = (bassin − taille)/4 —
+  // soit (bassin − poitrine)/4 + côté haut, identique dos et devant.
+  const coteBas = xCoteBasDos - (xCote - rep.cote);
+  // platitude de la pince de côté, à cheval sur la taille (p. 59, 61) ; sans
+  // pince de côté, la couture est déjà verticale à la taille
+  const demiPlatitudeCote = rep.cote > 0 ? METHOD.PLATITUDE_PINCE(rep.cote) / 2 : 0;
   if (rep.pinceSupplementaire) {
     const excedent = rep.excedentDos + rep.excedentDevant;
     warnings.push({
@@ -148,11 +180,27 @@ export function draftBuste(m: Measurements): BusteResult {
   // ═══════════════════ DEMI-DOS (1-8)
   const dos = new Draft("buste-dos", "Demi-dos");
 
-  // 1 — Cadre (p. 33-34)
+  // 1 — Cadre (p. 33-34), bassin compris (ét. 4-5)
   const dessousBrasDos = dos.point("dessous-bras", pt(xCote, yEmmanchure), "Point de côté sur la ligne d'emmanchure");
   dos.helper("ligne-emmanchure", pt(0, yEmmanchure), pt(xCote, yEmmanchure), "Ligne d'emmanchure", "p. 34 ét. 7");
   dos.helper("ligne-carrure", pt(0, yCarrure), pt(xCote, yCarrure), "Ligne de carrure", "p. 34 ét. 8");
   dos.helper("ligne-epaule", pt(0, 0), pt(xCote, 0), "Ligne d'épaule dos", "p. 33 ét. 2");
+  const bassinCoteDos = dos.point(
+    "bassin-cote",
+    pt(xCoteBasDos, yBassin),
+    "Coin de bassin : bassin/4 − 1 posé SUR la ligne de bassin",
+    "p. 33 ét. 5",
+  );
+  const bassinMilieuDos = dos.point("bassin-milieu", pt(0, yBassin), "Milieu dos sur la ligne de bassin", "p. 33 ét. 4");
+  // la ligne de côté basse remonte du bassin vers la taille (ét. 5)
+  dos.helper("ligne-cote-basse", pt(xCoteBasDos, yBassin), pt(xCoteBasDos, yTaille), "Ligne de côté basse : bassin/4 − 1", "p. 33 ét. 5");
+  dos.helper(
+    "ligne-petites-hanches",
+    pt(0, yPetitesHanches),
+    pt(xCoteBasDos, yPetitesHanches),
+    "Ligne de petites hanches (aide)",
+    "p. 36, 38",
+  );
 
   // 2 — Encolure dos (p. 39-40, C2 : nuque SOUS la ligne d'épaule)
   const nuque = dos.point("nuque", pt(0, profEncolureDos), "Nuque : profondeur d'encolure sous la ligne d'épaule", "p. 40");
@@ -186,7 +234,7 @@ export function draftBuste(m: Measurements): BusteResult {
     "p. 42 ét. 3",
   );
 
-  // 7 — Pinces de taille dos (p. 54-58)
+  // 7 — Pinces de taille dos (p. 54-58), prolongées en losange sous la taille (p. 55)
   const tailleMilieuDos = dos.point("taille-milieu-dos", pt(rep.milieuDos, yTaille), "Milieu dos cintré à la taille", "p. 55");
   const tailleCoteDos = dos.point("taille-cote-dos", pt(xCote - rep.cote, yTaille), "Côté dos cintré (pince de côté)", "p. 54");
   if (rep.pinceDemiDos > 0) {
@@ -194,16 +242,44 @@ export function draftBuste(m: Measurements): BusteResult {
     const xAxe = (tailleMilieuDos.x + tailleCoteDos.x) / 2;
     // sommet SUR la ligne d'emmanchure, borne haute des planches (C20, p. 55)
     const apex = pt(xAxe, yEmmanchure + METHOD.SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE);
+    // sommet bas à 11 cm sous la taille (p. 55)
+    const apexBas = pt(xAxe, yTaille + METHOD.LONGUEUR_PINCE_DEMI_DOS_SOUS_TAILLE);
     dos.dart({
       id: "pince-demi-dos",
       legs: [pt(xAxe - rep.pinceDemiDos / 2, yTaille), pt(xAxe + rep.pinceDemiDos / 2, yTaille)],
       apex,
-      axis: [pt(xAxe, yTaille), apex],
+      apexBas,
+      axis: [apexBas, apex],
       value: rep.pinceDemiDos,
       platitude: METHOD.PLATITUDE_PINCE(rep.pinceDemiDos),
       label: `Pince demi-dos ${rep.pinceDemiDos.toFixed(1)} cm`,
     });
   }
+  // 8 — Bas du gabarit dos : platitude de côté, couture de côté basse, cintrage milieu dos
+  const platitudeCoteHautDos = dos.point(
+    "cote-platitude-haut",
+    pt(tailleCoteDos.x, yTaille - demiPlatitudeCote),
+    "Haut de la platitude de côté",
+    "p. 59, 61",
+  );
+  const platitudeCoteBasDos = dos.point(
+    "cote-platitude-bas",
+    pt(tailleCoteDos.x, yTaille + demiPlatitudeCote),
+    "Bas de la platitude de côté (parts égales autour de la taille)",
+    "p. 59, 61",
+  );
+  const jonctionCoteDos = dos.point(
+    "jonction-cote-bas",
+    pt(xCoteBasDos, yJonctionCote),
+    "Jonction avec la ligne de côté basse, SOUS les petites hanches",
+    "p. 61-62",
+  );
+  const petitesHanchesMilieuDos = dos.point(
+    "milieu-dos-petites-hanches",
+    pt(0, yPetitesHanches),
+    "Fin du cintrage milieu dos, au niveau des petites hanches",
+    "p. 55",
+  );
 
   // 6 + 8 — Contour dos : encolure → épaule → emmanchure → côté → taille → milieu dos
   dos.curve(
@@ -232,13 +308,25 @@ export function draftBuste(m: Measurements): BusteResult {
     "Emmanchure dos : épaule → carrure → bissectrice → platitude → côté",
     "p. 42-44",
   );
-  dos.line("cote-dos", dessousBrasDos, tailleCoteDos, "Couture de côté dos (droite)", "p. 54, 61");
-  dos.line("taille-dos", tailleCoteDos, tailleMilieuDos, "Ligne de taille dos");
-  dos.line("milieu-dos-bas", tailleMilieuDos, pt(0, yEmmanchure), "Milieu dos cintré depuis la ligne d'emmanchure", "p. 55");
+  dos.line("cote-dos", dessousBrasDos, platitudeCoteHautDos, "Couture de côté dos, à la règle jusqu'à la platitude", "p. 54, 61");
+  if (demiPlatitudeCote > 0) {
+    dos.line("cote-platitude", platitudeCoteHautDos, platitudeCoteBasDos, "Platitude de côté, à cheval sur la taille", "p. 59, 61");
+  }
+  dos.curve(
+    "cote-bas",
+    courbeCoteBasse(platitudeCoteBasDos, jonctionCoteDos),
+    "Couture de côté basse : presque droite à la taille, rejoint la ligne sous les petites hanches",
+    "p. 61-62",
+  );
+  dos.line("cote-ligne-basse", jonctionCoteDos, bassinCoteDos, "Ligne de côté basse jusqu'au bassin", "p. 33 ét. 5");
+  dos.line("bassin-dos", bassinCoteDos, bassinMilieuDos, "Ligne de bassin", "p. 33 ét. 4");
+  dos.line("milieu-dos-bassin", bassinMilieuDos, petitesHanchesMilieuDos, "Milieu dos, du bassin aux petites hanches");
+  dos.line("milieu-dos-cintrage-bas", petitesHanchesMilieuDos, tailleMilieuDos, "Cintrage milieu dos, des petites hanches à la taille", "p. 55");
+  dos.line("milieu-dos-cintrage-haut", tailleMilieuDos, pt(0, yEmmanchure), "Milieu dos cintré depuis la ligne d'emmanchure", "p. 55");
   dos.line("milieu-dos-haut", pt(0, yEmmanchure), nuque, "Milieu dos");
 
   dos.mark({ id: "droit-fil-dos", at: pt(4, yEmmanchure + 4), to: pt(4, yTaille - 3), kind: "droit-fil", label: "DL" });
-  dos.lineRef("ref-milieu-dos", pt(0, 0), pt(0, yTaille), "Milieu dos", "p. 33 ét. 1");
+  dos.lineRef("ref-milieu-dos", pt(0, 0), pt(0, yBassin), "Milieu dos", "p. 33 ét. 1");
   dos.lineRef("ref-taille-dos", pt(0, yTaille), pt(xCote, yTaille), "Ligne de taille", "p. 33 ét. 3");
   dos.label({ at: pt(8, yTaille - 6), text: "DOS", anchor: "middle" });
 
@@ -256,6 +344,29 @@ export function draftBuste(m: Measurements): BusteResult {
     pt(largeurPlanche, yEpauleDevant),
     "Ligne d'épaule devant",
     "p. 35 ét. 10",
+  );
+  // bas du cadre devant (ét. 11) : bassin/4 + 1 reporté SUR la ligne de
+  // taille depuis le milieu devant, perpendiculaire descendant au bassin
+  const xCoteBasDevant = largeurPlanche - (bassinAisee / 4 + METHOD.DEMI_LARGEUR_AJUSTEMENT);
+  const bassinCoteDevant = devant.point(
+    "bassin-cote",
+    pt(xCoteBasDevant, yBassin),
+    "Coin de bassin : bassin/4 + 1 reporté sur la ligne de taille, descendu au bassin",
+    "p. 35 ét. 11",
+  );
+  const bassinMilieuDevant = devant.point(
+    "bassin-milieu",
+    pt(largeurPlanche, yBassin),
+    "Milieu devant sur la ligne de bassin",
+    "p. 33 ét. 4",
+  );
+  devant.helper("ligne-cote-basse", pt(xCoteBasDevant, yTaille), pt(xCoteBasDevant, yBassin), "Ligne de côté basse : bassin/4 + 1", "p. 35 ét. 11");
+  devant.helper(
+    "ligne-petites-hanches",
+    pt(xCoteBasDevant, yPetitesHanches),
+    pt(largeurPlanche, yPetitesHanches),
+    "Ligne de petites hanches (aide)",
+    "p. 36, 38",
   );
 
   // D2 — Encolure devant (p. 40)
@@ -365,25 +476,59 @@ export function draftBuste(m: Measurements): BusteResult {
     "Côté devant cintré (pince de côté)",
     "p. 54",
   );
-  const tailleMilieuDevant = devant.point("taille-milieu-devant", pt(largeurPlanche, yTaille));
+  devant.point("taille-milieu-devant", pt(largeurPlanche, yTaille));
   if (rep.pinceDevant > 0) {
-    // pointe arrêtée à la platitude de poitrine sous le saillant (C15, p. 75)
-    const apex = pt(saillant.x, saillant.y + METHOD.PLATITUDE_POITRINE);
+    // sommet À la croix du saillant : bretelle et pince de taille forment une
+    // ligne continue sur le tracé (C15 re-tranché 2026-07-15, p. 75 ; la
+    // platitude de poitrine ≈ 2 cm est une consigne de montage, non dessinée)
+    const apex = pt(saillant.x, saillant.y);
+    // sommet bas à 9 cm sous la taille (p. 55), pince en losange
+    const apexBas = pt(saillant.x, yTaille + METHOD.LONGUEUR_PINCE_DEVANT_SOUS_TAILLE);
     devant.dart({
       id: "pince-taille-devant",
       legs: [pt(saillant.x - rep.pinceDevant / 2, yTaille), pt(saillant.x + rep.pinceDevant / 2, yTaille)],
       apex,
-      axis: [pt(saillant.x, yTaille), apex],
+      apexBas,
+      axis: [apexBas, apex],
       value: rep.pinceDevant,
       platitude: METHOD.PLATITUDE_PINCE(rep.pinceDevant),
       label: `Pince devant ${rep.pinceDevant.toFixed(1)} cm`,
     });
   }
+  // Bas du gabarit devant : platitude de côté, couture de côté basse (p. 59, 61-62)
+  const platitudeCoteHautDevant = devant.point(
+    "cote-platitude-haut",
+    pt(tailleCoteDevant.x, yTaille - demiPlatitudeCote),
+    "Haut de la platitude de côté",
+    "p. 59, 61",
+  );
+  const platitudeCoteBasDevant = devant.point(
+    "cote-platitude-bas",
+    pt(tailleCoteDevant.x, yTaille + demiPlatitudeCote),
+    "Bas de la platitude de côté (parts égales autour de la taille)",
+    "p. 59, 61",
+  );
+  const jonctionCoteDevant = devant.point(
+    "jonction-cote-bas",
+    pt(xCoteBasDevant, yJonctionCote),
+    "Jonction avec la ligne de côté basse, SOUS les petites hanches",
+    "p. 61-62",
+  );
 
   // D7 + D9 — Contour devant
-  devant.line("cote-devant", dessousBras, tailleCoteDevant, "Couture de côté devant (droite)", "p. 54, 61");
-  devant.line("taille-devant", tailleCoteDevant, tailleMilieuDevant, "Ligne de taille devant");
-  devant.line("milieu-devant", tailleMilieuDevant, gorge, "Milieu devant");
+  devant.line("cote-devant", dessousBras, platitudeCoteHautDevant, "Couture de côté devant, à la règle jusqu'à la platitude", "p. 54, 61");
+  if (demiPlatitudeCote > 0) {
+    devant.line("cote-platitude", platitudeCoteHautDevant, platitudeCoteBasDevant, "Platitude de côté, à cheval sur la taille", "p. 59, 61");
+  }
+  devant.curve(
+    "cote-bas",
+    courbeCoteBasse(platitudeCoteBasDevant, jonctionCoteDevant),
+    "Couture de côté basse : presque droite à la taille, rejoint la ligne sous les petites hanches",
+    "p. 61-62",
+  );
+  devant.line("cote-ligne-basse", jonctionCoteDevant, bassinCoteDevant, "Ligne de côté basse jusqu'au bassin", "p. 35 ét. 11");
+  devant.line("bassin-devant", bassinCoteDevant, bassinMilieuDevant, "Ligne de bassin", "p. 33 ét. 4");
+  devant.line("milieu-devant", bassinMilieuDevant, gorge, "Milieu devant");
   devant.curve(
     "encolure-devant",
     encolureDevant.curve,
@@ -427,7 +572,7 @@ export function draftBuste(m: Measurements): BusteResult {
   devant.lineRef(
     "ref-milieu-devant",
     pt(largeurPlanche, yEpauleDevant),
-    pt(largeurPlanche, yTaille),
+    pt(largeurPlanche, yBassin),
     "Milieu devant",
     "p. 35 ét. 10",
   );
@@ -473,6 +618,14 @@ export function draftBuste(m: Measurements): BusteResult {
     { key: "pinceBretelle", label: "Pince bretelle (poitrine/20 + 1)", value: valeurBretelle, unit: "cm", bookRef: "p. 52" },
     { key: "aAbsorberHaut", label: "À absorber à la taille (haut, par quart)", value: aAbsorberHaut, unit: "cm", bookRef: "p. 56" },
     { key: "aAbsorberBas", label: "À absorber à la taille (bas, par quart)", value: aAbsorberBas, unit: "cm", bookRef: "p. 56" },
+    {
+      key: "hauteurBassin",
+      label: m.hauteurBassin === undefined ? "Hauteur de bassin (standard méthode)" : "Hauteur de bassin (mesurée)",
+      value: hauteurBassin,
+      unit: "cm",
+      bookRef: "généralités p. 24",
+    },
+    { key: "coteBas", label: "Pince de côté basse (dos = devant)", value: coteBas, unit: "cm", bookRef: "p. 57" },
     { key: "cote", label: "Pince de côté (dos = devant)", value: rep.cote, unit: "cm", bookRef: "p. 54" },
     { key: "pinceDevant", label: "Pince du devant", value: rep.pinceDevant, unit: "cm", bookRef: "p. 54" },
     { key: "pinceDemiDos", label: "Pince du demi-dos", value: rep.pinceDemiDos, unit: "cm", bookRef: "p. 54" },

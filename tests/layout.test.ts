@@ -24,6 +24,14 @@ describe("translatePiece", () => {
     expect(moved.points["snp-dos"].x).toBeCloseTo(dos.points["snp-dos"].x + 10, 6);
     expect(curveLength(moved.curves["emmanchure"])).toBeCloseTo(curveLength(dos.curves["emmanchure"]), 6);
   });
+
+  it("translate AUSSI le sommet bas des pinces en losange (régression : losange déformé à l'export)", () => {
+    const { dos } = draftBuste(demo);
+    const pince = dos.darts.find((d) => d.id === "pince-demi-dos")!;
+    const moved = translatePiece(dos, 10, 2).darts.find((d) => d.id === "pince-demi-dos")!;
+    expect(moved.apexBas!.x).toBeCloseTo(pince.apexBas!.x + 10, 6);
+    expect(moved.apexBas!.y).toBeCloseTo(pince.apexBas!.y + 2, 6);
+  });
 });
 
 describe("layoutPieces : jamais de chevauchement", () => {

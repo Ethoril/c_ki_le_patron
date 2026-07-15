@@ -8,7 +8,7 @@ Application web statique générant des **patrons de base de couture sur mesure*
 
 Le projet est hébergé sur GitHub, déployé automatiquement sur GitHub Pages, et développé avec Claude Code dans VS Code.
 
-**Ce que le projet n'est pas (v1)** : pas de compte utilisateur, pas de backend, pas de transformation de patrons (élargissements, pivotements de pinces), pas de gradation multi-tailles. Le patron de base est produit **sans valeurs de couture ni aisance**, conformément à la méthode (l'aisance s'ajoute au moment de la transformation selon le modèle).
+**Ce que le projet n'est pas (v1)** : pas de compte utilisateur, pas de backend, pas de transformation de patrons (élargissements, pivotements de pinces), pas de gradation multi-tailles. Le patron de base est produit **sans valeurs de couture**, conformément à la méthode ; une **aisance optionnelle** (défaut 2 cm au tour, réglable de 0 à 5) élargit le gabarit — à 0, le tracé est exactement celui du livre.
 
 ---
 
@@ -27,7 +27,7 @@ Le projet est hébergé sur GitHub, déployé automatiquement sur GitHub Pages, 
 ### 3.1 Saisie des mensurations
 
 - Formulaire groupé par familles (contours, longueurs, largeurs, poitrine, réglages), unités en cm, pas de 0,5.
-- **Champs optionnels** (vides = comportement du livre, `docs/methode/buste.md` §Extensions hors livre) : **pente d'épaule** (dénivelé mesuré, remplace les angles 18°/26°) et **aisance globale** (0–5 cm au tour, défaut 2 ; 0 = patron de base du livre strict).
+- **Champs optionnels** (vides = comportement du livre, `docs/methode/buste.md` §Extensions hors livre) : **pente d'épaule** (dénivelé mesuré, remplace les angles 18°/26°), **aisance globale** (0–5 cm au tour, défaut 2 ; 0 = patron de base du livre strict) et **hauteur de bassin** (taille → bassin ; vide = standard 20 cm de la méthode, `generalites.md` §6).
 - **Validation à deux niveaux** : bornes physiques par mesure (erreur bloquante), et contrôles de cohérence issus de la méthode (avertissement non bloquant). Exemples de contrôles de cohérence : carrure devant < carrure dos (le livre indique qu'une carrure devant ≥ dos signale une erreur de prise de mesure) ; longueur devant > longueur dos ; tour de taille < tour de poitrine.
 - Jeux de mesures : sauvegarde locale (localStorage) de plusieurs profils nommés, import/export JSON. Un profil de démonstration (les valeurs d'exemple du livre : poitrine 88, taille 68, bassin 92, cou 38) sert de référence de test.
 
