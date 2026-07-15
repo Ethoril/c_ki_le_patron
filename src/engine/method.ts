@@ -114,6 +114,28 @@ export const METHOD = {
    */
   SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE: 0,
 
+  /**
+   * Hauteur de bassin standard (taille → bassin) quand la mesure n'est pas
+   * relevée : 20 cm — moyenne appliquée par la majorité des modélistes, la
+   * FDA situant la hauteur de bassin entre 17 et 23 cm quelle que soit la
+   * stature (generalites.md §6, p. 24).
+   */
+  HAUTEUR_BASSIN_STANDARD: 20,
+  /** Petites hanches : ligne d'aide à mi-distance taille ↔ bassin (p. 24, 36). */
+  PETITES_HANCHES_FRACTION: 0.5,
+  /** Longueur de la pince du devant sous la taille : 9 cm (plafond p. 55). */
+  LONGUEUR_PINCE_DEVANT_SOUS_TAILLE: 9,
+  /** Longueur de la pince du demi-dos sous la taille : 11 cm (plafond p. 55). */
+  LONGUEUR_PINCE_DEMI_DOS_SOUS_TAILLE: 11,
+  /**
+   * Jonction de la couture de côté basse avec la ligne de côté basse : SOUS
+   * la ligne des petites hanches, par une courbe aplatie (p. 61-62,
+   * fig. 7-8 ; la fig. 9 barrée revient sur la ligne trop haut, au niveau
+   * des petites hanches). En fraction de la hauteur de bassin sous la
+   * taille. [transcription : mi-distance petites hanches ↔ bassin]
+   */
+  JONCTION_COTE_BAS_FRACTION: 0.75,
+
   /** Plafonds de répartition des pinces de taille (p. 55). */
   PLAFOND_PINCE_DEVANT: 3,
   /** Pinces de côté : même valeur dos et devant, ≤ 4 cm chacune (p. 54-55). */

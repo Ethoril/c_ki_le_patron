@@ -9,9 +9,10 @@ import { draftBuste } from "../src/engine/pieces/buste";
 import type { Measurements } from "../src/engine/measurements";
 import { validateBounds } from "../src/engine/measurements";
 import { METHOD } from "../src/engine/method";
+import { dartOutline } from "../src/engine/drafting";
 import { dist } from "../src/engine/geometry/point";
-import { startTangent, endTangent, curveToPolyline } from "../src/engine/geometry/curve";
-import { isClosed, outlineArea, selfIntersects, segmentLength } from "../src/engine/geometry/path";
+import { startTangent, endTangent, curveToPolyline, curveLength } from "../src/engine/geometry/curve";
+import { isClosed, outlineArea, selfIntersects } from "../src/engine/geometry/path";
 
 /** PRNG déterministe (mulberry32) : les 200 cas sont les mêmes à chaque run. */
 function mulberry32(seed: number) {
@@ -43,13 +44,15 @@ function randomBody(rnd: () => number): Measurements {
     longueurEpaule: half(range(11.5, 15)),
   };
   m.longueurDevant = half(m.longueurDos + range(1.5, 5));
-  // extensions optionnelles (buste.md §Extensions hors livre) : présentes une
-  // fois sur deux — les invariants doivent tenir avec ET sans
+  // extensions et mesures optionnelles : présentes une fois sur deux — les
+  // invariants doivent tenir avec ET sans
   if (rnd() < 0.5) m.aisance = half(range(0, 5));
   if (rnd() < 0.5) {
     // pente plausible : angle entre 12° et 32°, jamais au plafond de 45°
     m.penteEpaule = half(m.longueurEpaule * Math.sin((range(12, 32) * Math.PI) / 180));
   }
+  // hauteur de bassin mesurée : plage FDA 17-23 (generalites §6) ; absente = 20
+  if (rnd() < 0.5) m.hauteurBassin = half(range(17, 23));
   return m;
 }
 
@@ -159,14 +162,81 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("pinces de côté de même valeur → coutures de côté dos et devant de même longueur", () => {
+  it("coutures de côté dos et devant de même longueur sur TOUTE la hauteur (emmanchure → bassin)", () => {
+    // ligne haute + platitude à cheval sur la taille + courbe basse + ligne
+    // de côté basse jusqu'au bassin — le côté s'assemble bord à bord (p. 76)
+    const longueurCote = (piece: ReturnType<typeof draftBuste>["dos"]) =>
+      dist(piece.points["dessous-bras"], piece.points["cote-platitude-haut"]) +
+      dist(piece.points["cote-platitude-haut"], piece.points["cote-platitude-bas"]) +
+      curveLength(piece.curves["cote-bas"]) +
+      dist(piece.points["jonction-cote-bas"], piece.points["bassin-cote"]);
     for (const m of bodies) {
       const { dos, devant } = draftBuste(m);
-      const coteDos = segmentLength(dos.outline.find((s) => s.kind === "line" && s.a === dos.points["dessous-bras"])!);
-      const coteDevant = segmentLength(
-        devant.outline.find((s) => s.kind === "line" && s.a === devant.points["dessous-bras"])!,
-      );
-      expect(coteDos).toBeCloseTo(coteDevant, 6);
+      expect(longueurCote(dos)).toBeCloseTo(longueurCote(devant), 6);
+    }
+  });
+
+  it("bas du gabarit : largeurs au bassin, côté bas commun, jonction sous les petites hanches, courbe sans S", () => {
+    for (const m of bodies) {
+      const { dos, devant, report } = draftBuste(m);
+      const get = (k: string) => report.values.find((v) => v.key === k)!.value;
+      const aisance = m.aisance ?? 0;
+      const hb = m.hauteurBassin ?? METHOD.HAUTEUR_BASSIN_STANDARD;
+      const yTaille = m.longueurDos;
+      const yBassin = yTaille + hb;
+      const yPetitesHanches = yTaille + hb / 2;
+      const largeurPlanche = (m.tourPoitrine + aisance) / 2;
+      // largeur au bassin = (bassin + aisance)/4 ∓ 1 (ét. 5 et 11)
+      expect(dos.points["bassin-cote"].x).toBeCloseTo((m.tourBassin + aisance) / 4 - 1, 6);
+      expect(dos.points["bassin-cote"].y).toBeCloseTo(yBassin, 6);
+      expect(largeurPlanche - devant.points["bassin-cote"].x).toBeCloseTo((m.tourBassin + aisance) / 4 + 1, 6);
+      // côté bas émergent identique dos/devant = (bassin − poitrine)/4 + côté haut
+      const coteBasAttendu = (m.tourBassin - m.tourPoitrine) / 4 + get("cote");
+      expect(get("coteBas")).toBeCloseTo(coteBasAttendu, 6);
+      expect(dos.points["bassin-cote"].x - dos.points["taille-cote-dos"].x).toBeCloseTo(coteBasAttendu, 6);
+      expect(devant.points["taille-cote-devant"].x - devant.points["bassin-cote"].x).toBeCloseTo(coteBasAttendu, 6);
+      // cintrage milieu dos terminé aux petites hanches (p. 55)
+      expect(dos.points["milieu-dos-petites-hanches"].x).toBeCloseTo(0, 6);
+      expect(dos.points["milieu-dos-petites-hanches"].y).toBeCloseTo(yPetitesHanches, 6);
+      for (const piece of [dos, devant]) {
+        // la jonction est STRICTEMENT sous les petites hanches et au-dessus du bassin (p. 61-62)
+        const j = piece.points["jonction-cote-bas"];
+        expect(j.y, `${piece.id} jonction sous les petites hanches`).toBeGreaterThan(yPetitesHanches);
+        expect(j.y, `${piece.id} jonction au-dessus du bassin`).toBeLessThan(yBassin);
+        // courbe aplatie : y strictement descendante, x monotone vers la ligne
+        // de côté basse — jamais de S, jamais de retour sur la ligne avant la
+        // jonction (fig. 9 barrée)
+        const poly = curveToPolyline(piece.curves["cote-bas"], 64);
+        const sens = Math.sign(j.x - poly[0].x) || 1;
+        for (let i = 1; i < poly.length; i++) {
+          expect(poly[i].y, `${piece.id} y descendant`).toBeGreaterThanOrEqual(poly[i - 1].y - 1e-9);
+          expect((poly[i].x - poly[i - 1].x) * sens, `${piece.id} x monotone`).toBeGreaterThanOrEqual(-1e-9);
+        }
+      }
+    }
+  });
+
+  it("pinces de taille en losange : sommets bas à 9/11 cm sous la taille, platitudes symétriques (p. 55, 59)", () => {
+    for (const m of bodies) {
+      const { dos, devant } = draftBuste(m);
+      const yTaille = m.longueurDos;
+      const yBassin = yTaille + (m.hauteurBassin ?? METHOD.HAUTEUR_BASSIN_STANDARD);
+      const attendus: [ReturnType<typeof draftBuste>["dos"], string, number][] = [
+        [dos, "pince-demi-dos", METHOD.LONGUEUR_PINCE_DEMI_DOS_SOUS_TAILLE],
+        [devant, "pince-taille-devant", METHOD.LONGUEUR_PINCE_DEVANT_SOUS_TAILLE],
+      ];
+      for (const [piece, id, longueur] of attendus) {
+        const dart = piece.darts.find((d) => d.id === id);
+        if (!dart) continue;
+        expect(dart.apexBas!.y - yTaille, `${id} longueur sous la taille`).toBeCloseTo(longueur, 6);
+        expect(dart.apexBas!.y, `${id} au-dessus du bassin`).toBeLessThan(yBassin);
+        const demi = dart.platitude! / 2;
+        const poly = dartOutline(dart);
+        for (const leg of dart.legs) {
+          expect(poly.some((p) => Math.abs(p.x - leg.x) < 1e-9 && Math.abs(p.y - (leg.y - demi)) < 1e-9)).toBe(true);
+          expect(poly.some((p) => Math.abs(p.x - leg.x) < 1e-9 && Math.abs(p.y - (leg.y + demi)) < 1e-9)).toBe(true);
+        }
+      }
     }
   });
 
