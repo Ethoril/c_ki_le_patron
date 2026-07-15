@@ -36,12 +36,12 @@
 | C12 | Pince d'épaule dos | option absorbée par défaut | p. 48 « À noter » : la construction du patron de base doit **impérativement** comporter cette pince pour que le tracé d'emmanchure soit correct. L'absorption dans l'épaule (p. 47, fig. 4) reste une option montrée par le livre (pas de découpe emmanchure/milieu dos), l'écart y est chiffré **1 cm, dos plus long que devant**, résorbé au montage (bords en faux biais) — résout l'[À VALIDER] v2 sur le sens de l'écart. Cible v3+ : tracer la vraie pince (voir §9) |
 | C13 | Construction de la pince d'épaule dos | non chiffrée | axe **au milieu de la largeur d'épaule**, perpendiculaire à la ligne d'épaule inclinée, **longueur 7 cm** ; largeur standard **1 cm** (dos arrondi : jusqu'à 2 cm de large et 5 cm de long) ; après fermeture : **rallonger l'extrémité d'épaule de la valeur de la pince** puis retracer l'emmanchure jusqu'à la carrure, et retracer l'épaule à la règle **à 18°** pince fermée (p. 46-48). NB : le livre écrit « 1 cm de part et d'autre de l'axe » puis parle d'une « valeur de 1 cm » — lecture retenue : **largeur totale 1 cm** (cohérent avec « environ 1 à 2 cm » p. 46 et « augmentée à 2 cm » p. 48) **[AMBIGUÏTÉ notée]** |
 | C14 | Direction du report de la valeur bretelle | non précisée | depuis le milieu d'épaule **vers l'emmanchure** (fig. 5-6 p. 52 : 1er bras au milieu, 2e bras côté emmanchure) ; fermeture pliée sur le 1er bras, valeur couchée **vers le milieu devant** |
-| C15 | Retrait de pointe des pinces au saillant | pince de taille arrêtée 4 cm sous le saillant (source tierce) | livre : **platitude de poitrine ≈ 2 cm à l'extrémité de CHAQUE pince** (bretelle et taille) pour éviter le bec au saillant, valeur exacte fonction du volume de poitrine, ajustée à l'essayage (p. 75) ; les planches p. 55 montrent le haut de pince juste sous la croix. Les 4 cm v2 sont à reconsidérer (l'essayage tranche) |
+| C15 | Retrait de pointe des pinces au saillant | pince de taille arrêtée 4 cm sous le saillant (source tierce) | livre : **platitude de poitrine ≈ 2 cm à l'extrémité de CHAQUE pince** (bretelle et taille) pour éviter le bec au saillant, valeur exacte fonction du volume de poitrine, ajustée à l'essayage (p. 75) ; les planches p. 55 montrent le haut de pince juste sous la croix. **Tranché le 2026-07-15 : 2 cm, valeur du livre** (`PLATITUDE_POITRINE` dans `method.ts`), à confirmer à l'essayage |
 | C16 | Platitudes de l'encolure devant | « suit la verticale sur 2-3 cm » | quantifié p. 64 : **≈ 1/3 de la largeur** d'encolure (platitude horizontale à la gorge) et **≈ 1/3 de la profondeur** (platitude verticale sous l'épaule). Le « 2-3 cm » de p. 63 en est le cas particulier (cou 38 : 9,5/3 ≈ 3,2 ; 7,5/3 = 2,5) |
 | C17 | Longueurs d'emmanchure | mesurées, exposées, sans contrôle | contrôle du livre : **différence normale de 1 à 2 cm** entre dos et devant (le plus long des deux dépend de la morphologie). Hors plage → erreur d'inclinaison d'épaule ou de répartition du tour de poitrine dos/devant ; manche difficile voire impossible à monter (p. 65) |
 | C18 | Élargissement de base / marges | résumés | procédure chiffrée p. 66-68 : épaule +1 cm (parallèle), ligne d'emmanchure **abaissée de 2 cm**, côtés +1 cm dos ET devant, courbe d'emmanchure **décalquée puis décalée** depuis la carrure ; marges 1 cm (côté de la toile : 2-3 cm) ; dos d'essayage **toujours coupé au pli** ; croisure à 2-3 cm du milieu devant. Voir §15-17 |
 | C19 | Pince milieu dos | facultative, dernier recours | confirmé pour le patron (découpe milieu dos ; rarissime au pli, p. 55) **mais indispensable sur la toile d'essayage** (élargissements minimaux), valeur standard 1 cm à adapter (p. 81) — cohérent avec mD = 1 de l'exemple normatif |
-| C20 | Haut de la pince de demi-dos | y emmanchure + 2 [À VALIDER] | toujours pas chiffré par le texte ; les planches p. 55 (fig. 2) font monter le haut de pince **jusque vers la ligne d'emmanchure**. [À VALIDER] maintenu, borne haute = ligne d'emmanchure |
+| C20 | Haut de la pince de demi-dos | y emmanchure + 2 [À VALIDER] | toujours pas chiffré par le texte ; les planches p. 55 (fig. 2) font monter le haut de pince **jusque vers la ligne d'emmanchure**. **Tranché le 2026-07-15 : sommet posé SUR la ligne d'emmanchure** (borne haute des planches, `SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE = 0`), à confirmer à l'essayage |
 
 ---
 
@@ -51,8 +51,11 @@
 - Planche en miroir comme dans le livre : **milieu dos à gauche (x = 0)**,
   **milieu devant à droite (x = tour de poitrine / 2)**. Avec les largeurs
   ∓ 1 cm (C5), les lignes de côté dos et devant coïncident à
-  **x = poitrine/4 − 1** (le rendu écran peut écarter les pièces ; le livre
-  trace le devant à 10-15 cm du dos, p. 35, ét. 9).
+  **x = poitrine/4 − 1** — **au-dessus de la taille seulement** : sous la
+  taille, les lignes de côté basses sont à bassin/4 ∓ 1 de leur milieu et ne
+  coïncident plus (les pièces se chevauchent en coordonnées de construction ;
+  la mise en planche les écarte, comme le livre qui trace le devant à
+  10-15 cm du dos, p. 35, ét. 9).
 - `y = 0` : **ligne d'épaule dos** (horizontale de référence du gabarit, p. 33
   ét. 2). Le point d'encolure côté cou du dos est SUR cette ligne ; la nuque
   est en dessous (C2).
@@ -97,6 +100,7 @@
 | À absorber à la taille (bas, par quart) | (bassin − taille) / 4 | 92/68 → 6 | p. 56-57 |
 | Plafonds des pinces de taille | devant 3 ; côtés 4 chacune ; demi-dos 2 ; milieu dos 1-2 | — | p. 55 |
 | Longueur sous la taille | devant ≤ 9 cm ; demi-dos ≤ 11 cm ; côté finit aux petites hanches | — | p. 55 |
+| Hauteur de bassin (mesure absente) | standard 20 cm ; petites hanches à mi-distance (10 cm) | FDA : 17-23 cm quelle que soit la stature | generalites §6, p. 24 |
 | Platitude de pince à la taille | 2 à 4 cm, à parts égales de part et d'autre de la taille, inversement proportionnelle à la valeur | valeur 3 → 2 ; valeur 1-1,5 → ≥ 3 | p. 59 |
 | Platitude de poitrine | ≈ 2 cm à l'extrémité de chaque pince au saillant | — | p. 75 |
 | Différence de longueur d'emmanchure dos/devant | 1 à 2 cm (sens selon morphologie) | — | p. 65 |
@@ -104,12 +108,23 @@
 | Marges de couture | 1 cm ; côté de la toile 2-3 cm | — | p. 67 |
 | Croisure (patron d'essayage) | 2 à 3 cm du milieu devant | — | p. 68 |
 
-Le calcul « bas » sert aux vêtements descendant au bassin ; le buste v1
-s'arrête à la taille et applique le calcul « haut ». Règle d'application
-(p. 57, « À retenir ») : différence poitrine/taille → valeurs posées **à
-partir de la ligne de côté en partie haute** ; différence bassin/taille → à
-partir de la ligne de côté **en partie basse**. Dans les deux cas, un quart de
-la valeur totale par demi-panneau, et le patron final est le même.
+Le buste descend au bassin (extension du 2026-07-15) et applique **les deux
+calculs**. Règle d'application (p. 57, « À retenir ») : différence
+poitrine/taille → valeurs posées **à partir de la ligne de côté en partie
+haute** ; différence bassin/taille → à partir de la ligne de côté **en partie
+basse**. Dans les deux cas, un quart de la valeur totale par demi-panneau, et
+le patron final est le même.
+
+**Lecture moteur de ce « patron final identique »** : les bouches de pinces à
+la taille (devant, demi-dos, milieu dos) sont UNIQUES — le calcul haut les
+fixe. En partie basse, milieu dos, demi-dos et devant reprennent leurs valeurs
+de bouche ; la **pince de côté basse absorbe le reste** :
+côté bas = U_bas − (demi-dos + milieu dos) = (bassin − poitrine)/4 + côté
+haut. Sur l'exemple normatif 92/68, U_bas = 6 → côté bas = 3, exactement la
+fig. 4 p. 57 (demi-dos 1 + 2 + 3 ; demi-devant 3 + 3) — que
+`repartirPincesTaille(6)` reproduit aussi (contrôle croisé). Les deux calculs
+aboutissent au même point de taille cintré : (poitrine/4 ∓ 1) − côté haut =
+(bassin/4 ∓ 1) − côté bas.
 
 ## Lignes horizontales du gabarit (communes dos/devant)
 
@@ -120,12 +135,12 @@ miroir **sauf la ligne d'épaule**, qui lui est propre (p. 35, fig. 3).
 |---|---|---|
 | Ligne d'épaule dos | y = 0 (référence ; sur la feuille : à 7-10 cm du haut) | p. 33 ét. 2 |
 | Ligne de taille | y = longueur dos (**ligne de référence, rouge**) | p. 33 ét. 3 |
-| Ligne de bassin | y = taille + hauteur bassin (hors v1, documenté pour M4+) | p. 33 ét. 4 |
+| Ligne de bassin | y = taille + hauteur bassin (mesure optionnelle ; absente = standard 20 cm, generalites §6) — **bas du contour** | p. 33 ét. 4 |
 | Ligne d'emmanchure | y = longueur dos / 2 (mi-distance épaule ↔ taille) | p. 34 ét. 7 |
 | Ligne de carrure | y = longueur dos / 3 (tiers de la distance épaule ↔ emmanchure, reporté depuis l'emmanchure vers le haut) | p. 34 ét. 8 |
 | Ligne d'épaule devant | y = taille − longueur devant (propre au devant) | p. 35 ét. 10 |
 | Ligne de poitrine | y = ligne d'épaule devant + hauteur de poitrine (ligne d'aide, effacée après pose du saillant) | p. 50 |
-| Ligne de petites hanches | mi-distance taille ↔ bassin ; **ligne d'aide**, jamais de construction | p. 36, 38 |
+| Ligne de petites hanches | mi-distance taille ↔ bassin ; **ligne d'aide**, jamais de construction (tracée en aide : la couture de côté basse la croise, le cintrage milieu dos s'y termine) | p. 36, 38 |
 
 Note carrure : distance épaule ↔ emmanchure = longueur dos/2 ; le tiers =
 longueur dos/6 ; donc y_carrure = longueur dos/2 − longueur dos/6 =
@@ -142,9 +157,9 @@ poitrine (épaule → taille) et tour de bassin (taille → bassin).
 Milieu dos vertical en x = 0 (**référence, rouge**). Horizontales du tableau
 ci-dessus. Largeur haut : **poitrine/4 − 1**, appliquée **sur la ligne
 d'épaule** depuis le milieu dos ; perpendiculaire jusqu'à la taille = **ligne
-de côté** (ét. 6). Largeur bas (hors v1) : **bassin/4 − 1**, appliquée **sur
-la ligne de bassin** depuis le milieu dos, perpendiculaire remontant à la
-taille (ét. 5).
+de côté** (ét. 6). Largeur bas : **bassin/4 − 1**, appliquée **sur la ligne
+de bassin** depuis le milieu dos, perpendiculaire remontant à la taille =
+**ligne de côté basse** (ét. 5).
 
 Fig. 1 p. 33 : la silhouette de dos et la feuille, les huit étapes numérotées
 (① milieu dos, ② épaule, ③ taille, ④ bassin, ⑤ côté bas, ⑥ côté haut,
@@ -159,9 +174,9 @@ d'épaule (ét. 9 : le devant se place à 10-15 cm du dos, parallèle à sa lign
 de côté). Largeur : **poitrine/4 + 1** → verticale parallèle = **milieu
 devant** (référence, rouge). Sur le milieu devant, **depuis la taille**,
 reporter la **longueur du devant vers le haut** ; au point obtenu, horizontale
-jusqu'à la ligne de côté = **ligne d'épaule devant** (ét. 10). Largeur bas
-(hors v1) : **bassin/4 + 1** reporté **sur la ligne de taille** depuis le
-milieu devant, perpendiculaire descendant au bassin (ét. 11).
+jusqu'à la ligne de côté = **ligne d'épaule devant** (ét. 10). Largeur bas :
+**bassin/4 + 1** reporté **sur la ligne de taille** depuis le milieu devant,
+perpendiculaire descendant au bassin = **ligne de côté basse** (ét. 11).
 
 ### Petites hanches et silhouettes rondes (p. 36-37)
 
@@ -466,12 +481,22 @@ le bord du pistolet, le retourner en miroir et faire coïncider les marques
 **Pince de côté** (p. 61-62, fig. 5-9) : même principe — valeur sur la taille,
 platitude également répartie. **Partie haute à la règle** : de l'extrémité
 d'emmanchure sur la ligne de côté à la ligne de platitude, alignée sur le
-repère de valeur (fig. 6). **Partie basse** (taille → bassin, hors v1) :
-courbe **aplatie** (différente de la jupe) pour éviter un bec au montage ;
-presque droite à la taille, elle rejoint la ligne de côté **sous la ligne des
+repère de valeur (fig. 6). **Partie basse** (taille → bassin) : courbe
+**aplatie** (différente de la jupe) pour éviter un bec au montage ; presque
+droite à la taille, elle rejoint la ligne de côté basse **sous la ligne des
 petites hanches** par une légère courbe (fig. 7-8). Fig. 9 « Incorrect »
 (barrée) : pistolet posé pour creuser un S revenant à la ligne de côté trop
 haut, au niveau des petites hanches.
+
+Transcription moteur de la partie basse : platitude verticale de part et
+d'autre de la taille (comme les autres pinces, p. 59), puis **une cubique** du
+bas de platitude à la ligne de côté basse — tangentes verticales aux deux
+bouts (départ « presque droit » dans l'axe de la platitude, arrivée tangente à
+la ligne, jamais de S ni de retour au-dessus de la jonction) — qui rejoint la
+ligne **à mi-distance petites hanches ↔ bassin** (soit 3/4 de la hauteur de
+bassin sous la taille). Le livre dit seulement « sous les petites hanches » :
+la mi-distance est un choix **[transcription]**, ajustable à l'essayage. Sous
+la jonction, la couture suit la ligne de côté basse jusqu'au bassin.
 
 ## 12. Forme de l'encolure (p. 63-64)
 
@@ -733,7 +758,10 @@ future, hors périmètre actuel.*
 ## Construction du demi-dos (synthèse moteur)
 
 1. **Cadre** (§1). Milieu dos x = 0, horizontales du tableau, côté à
-   poitrine/4 − 1 de l'épaule à la taille. (Bas bassin/4 − 1 : hors v1.)
+   poitrine/4 − 1 de l'épaule à la taille ; ligne de côté basse à
+   bassin/4 − 1, posée SUR la ligne de bassin et remontant vers la taille
+   (ét. 5). Ligne de bassin à y = taille + hauteur de bassin (mesure
+   optionnelle, standard 20 cm) ; petites hanches (aide) à mi-distance.
 2. **Encolure dos** (§3, §12). `snp-dos` = (largeur encolure, 0) SUR la ligne
    d'épaule ; nuque = (0, + profondeur encolure dos). Courbe nuque → `snp-dos`
    avec platitude large au milieu dos (tangente horizontale) ; arrivée sur
@@ -756,21 +784,35 @@ future, hors périmètre actuel.*
 7. **Pinces de taille dos** (§10-11). Côté : même valeur que devant, partie
    haute à la règle du `dessous-bras` à la platitude. Demi-dos : axe à
    mi-distance entre bras de la pince de côté et milieu dos (ou bras de la
-   pince milieu dos) ; ≤ 2 cm ; haut : [À VALIDER — C20, borne = ligne
-   d'emmanchure] ; bas ≤ 11 cm sous la taille (hors v1). Milieu dos :
-   facultative au patron, cintrage 0-1 (algorithme) ; indispensable sur la
-   toile (C19).
-8. **Contour v1** : encolure → épaule → emmanchure → côté (droite) → taille →
-   milieu dos.
+   pince milieu dos) ; ≤ 2 cm ; haut : sommet SUR la ligne d'emmanchure
+   (C20, tranché 2026-07-15) ; bas : sommet à 11 cm sous la taille (plafond
+   p. 55), pince en losange, platitude à parts égales autour de la taille
+   (p. 59). Milieu dos : facultative au patron, cintrage 0-1 (algorithme) ;
+   indispensable sur la toile (C19).
+8. **Bas du gabarit** (§1 ét. 5, §11, p. 55). Couture de côté basse : du
+   point de taille cintré (platitude verticale), cubique aplatie rejoignant
+   la ligne de côté basse à mi-distance petites hanches ↔ bassin
+   [transcription], puis la ligne jusqu'au coin de bassin. Cintrage milieu
+   dos : le bord quitte x = milieuDos à la taille et rejoint x = 0 au niveau
+   des petites hanches (p. 55), puis suit le milieu dos jusqu'au bassin.
+9. **Contour** : encolure → épaule → emmanchure → côté haut (droite jusqu'à
+   la platitude) → platitude de côté (verticale, à cheval sur la taille) →
+   courbe de côté basse → ligne de côté basse → ligne de bassin → milieu dos
+   (bassin → petites hanches) → cintrage (petites hanches → taille →
+   emmanchure) → milieu dos → nuque. **La ligne de taille n'est plus un bord
+   de contour** : c'est une ligne de référence interne (rouge).
 
 ## Construction du demi-devant (synthèse moteur)
 
 Coordonnées en local devant (x' depuis le milieu devant, vers le côté) ; le
 rendu miroir fait x = poitrine/2 − x'.
 
-D1. **Cadre** (§2). Horizontales recopiées du dos SAUF l'épaule. Largeur
-   poitrine/4 + 1 → milieu devant (référence). Longueur devant portée depuis
-   la taille vers le haut sur le milieu devant → ligne d'épaule devant.
+D1. **Cadre** (§2). Horizontales recopiées du dos SAUF l'épaule (bassin et
+   petites hanches comprises). Largeur poitrine/4 + 1 → milieu devant
+   (référence). Longueur devant portée depuis la taille vers le haut sur le
+   milieu devant → ligne d'épaule devant. Largeur bas : bassin/4 + 1
+   reportée SUR la ligne de taille depuis le milieu devant, perpendiculaire
+   descendant au bassin = ligne de côté basse (ét. 11).
 D2. **Encolure devant** (§3, §12). `snp-devant` = (largeur encolure, y épaule
    devant) ; gorge = (0, y épaule devant + profondeur devant). Courbe qui suit
    la verticale d'encolure sur ≈ profondeur/3 (2-3 cm) sous `snp-devant`,
@@ -800,12 +842,17 @@ D7. **Emmanchure devant** (§6). Spline extrémité d'épaule (pivotée) → car
    (poitrine/4 + 1 local, y emmanchure). Virage plus ample que le dos par
    construction.
 D8. **Pinces de taille devant** (§10-11). Pince du devant : axe vertical par
-   le saillant, valeur équilibrée des deux côtés, ≤ 3 cm ; haut : v2 =
-   saillant + 4 cm — **le livre indique plutôt une platitude de poitrine
-   ≈ 2 cm par pince (C15) ; à trancher à l'essayage** ; bas ≤ 9 cm sous la
-   taille (hors v1). Pince de côté : tracée en premier, dos en miroir, ≤ 4,
-   partie haute à la règle.
-D9. **Côté devant** : droite de `dessous-bras` au point de taille cintré.
+   le saillant, valeur équilibrée des deux côtés, ≤ 3 cm ; haut : sommet à
+   2 cm sous le saillant — platitude de poitrine du livre (C15, tranché
+   2026-07-15) ; bas : sommet à 9 cm sous la taille (plafond p. 55), pince
+   en losange, platitude à parts égales autour de la taille (p. 59). Pince
+   de côté : tracée en premier, dos en miroir, ≤ 4, partie haute à la règle.
+D9. **Côté devant et bas** : droite de `dessous-bras` à la platitude du point
+   de taille cintré, platitude verticale à cheval sur la taille, cubique
+   aplatie rejoignant la ligne de côté basse à mi-distance petites hanches ↔
+   bassin [transcription], ligne jusqu'au coin de bassin, ligne de bassin
+   jusqu'au milieu devant, milieu devant prolongé de la gorge au bassin. La
+   ligne de taille devient référence interne (rouge).
 
 ## Choix documentés de la v1/v2 (cahier §4.4)
 
@@ -813,18 +860,23 @@ D9. **Côté devant** : droite de `dessous-bras` au point de taille cintré.
   écarté du dos d'un blanc calculé (≥ 5 cm entre boîtes englobantes) —
   équivalent du blanc de 10-15 cm du livre (p. 35, ét. 9). Les coordonnées de
   construction (côtés coïncidents) restent celles du livre.
-- Buste arrêté à la taille ; le livre poursuit jusqu'au bassin (largeurs
-  bassin/4 ∓ 1 — dos posé sur la ligne de bassin ét. 5, devant posé sur la
-  ligne de taille ét. 11 ; pinces prolongées 9/11 cm sous la taille ; pince de
-  côté arrondie finissant aux petites hanches, presque droite à la taille,
-  rejoignant le côté sous les petites hanches, p. 61-62). Reporté au jalon
-  dédié ; le calcul (bassin − taille)/4 est déjà exposé au rapport.
+- Buste prolongé jusqu'au bassin (étape du 2026-07-15, avant M4) : largeurs
+  bassin/4 ∓ 1 (dos posé sur la ligne de bassin ét. 5, devant posé sur la
+  ligne de taille ét. 11), pinces en losange prolongées 9/11 cm sous la
+  taille, couture de côté basse aplatie rejoignant la ligne de côté sous les
+  petites hanches (p. 61-62), cintrage milieu dos terminé aux petites hanches
+  (p. 55). Nouvelle mesure OPTIONNELLE `hauteurBassin` (taille → bassin) ;
+  absente = standard 20 cm (generalites §6, FDA 17-23). L'aisance globale
+  s'ajoute aussi au tour de bassin ; U_bas = (bassin − taille)/4 reste sur
+  les mesures du corps.
 - Pince d'épaule dos absorbée (option p. 47) plutôt que tracée — voir C12
   pour la cible v3+.
 - Rotation de pince bretelle limitée à la seconde moitié d'épaule et au haut
   d'emmanchure — désormais adossée au « rétablissement des mesures » p. 53
   (C11).
-- Ligne de petites hanches : ligne d'aide, non tracée en v1 (p. 36, 38).
+- Ligne de petites hanches : ligne d'aide (p. 36, 38), tracée en aide depuis
+  l'extension bassin (la couture de côté et le cintrage milieu dos s'y
+  réfèrent), jamais de construction de largeur.
 - Élargissement de base (p. 66), marges (p. 67), croisure (p. 68), coupe et
   assemblage (p. 69-77), corrections d'essayage (p. 78-85) : documentés
   ci-dessus, hors périmètre du moteur v1 (concernent la toile et le papier) ;
@@ -847,9 +899,10 @@ neutre, le tracé est exactement celui du livre.
 
 - Ajoutée aux **tours** avant division : milieu devant à
   x = (poitrine + aisance)/2 ; lignes de côté à (poitrine + aisance)/4 − 1 ;
-  largeur à la taille après pinces = (taille + aisance)/4 ∓ 1.
-- **U = (poitrine − taille)/4 inchangé** : la même aisance s'ajoute aux deux
-  tours.
+  largeur à la taille après pinces = (taille + aisance)/4 ∓ 1 ; lignes de
+  côté basses à (bassin + aisance)/4 ∓ 1.
+- **U = (poitrine − taille)/4 et U_bas = (bassin − taille)/4 inchangés** : la
+  même aisance s'ajoute aux trois tours.
 - Restent sur les mesures du **corps** : encolure, carrures, écart et hauteur
   de poitrine, longueurs, pince bretelle (pince anatomique).
 - aisance absente = 0 ; les golden tests du livre tournent à 0.
@@ -884,8 +937,15 @@ neutre, le tracé est exactement celui du livre.
   à l'excédent signalé près.
 - Extensions neutres → géométrie strictement identique au tracé du livre ;
   pente mesurée → dénivelé vertical de l'épaule dos = pente (plafonné 45°).
-- Pinces de côté dos et devant de même valeur ; longueurs de côté dos =
-  devant (emmanchure → taille).
+- Pinces de côté dos et devant de même valeur ; coutures de côté dos =
+  devant sur TOUTE la longueur (emmanchure → bassin).
+- Bas du gabarit : largeur au bassin = (bassin + aisance)/4 ∓ 1 ; côté bas
+  dos = côté bas devant = (bassin − poitrine)/4 + côté haut ; la courbe de
+  côté basse ne revient jamais sur la ligne de côté basse au-dessus de la
+  jonction (elle-même SOUS les petites hanches) ; pinces de taille en
+  losange, sommets bas à 9 cm (devant) / 11 cm (demi-dos) sous la taille,
+  platitudes à parts égales de part et d'autre de la taille ; hauteur de
+  bassin absente = 20 cm.
 - Nuque SOUS la ligne d'épaule (y > 0) ; encolure dos à tangente horizontale
   à la nuque ; gorge à tangente horizontale au milieu devant.
 - Emmanchures : passage à moins d'un epsilon des points imposés (carrure,
@@ -915,19 +975,19 @@ avant correction) :
    `pince-bretelle-2` à 26° avec sa longueur d'origine ; nouvelle courbe par
    les 3 points (C11, p. 53). Confirmer que le moteur reproduit bien les
    largeurs d'origine sur les lignes de carrure ET d'emmanchure.
-4. **Retrait de pointe de la pince de taille devant** : 4 cm actuels
-   (`method.ts`) vs platitude de poitrine ≈ 2 cm par pince du livre (C15,
-   p. 75). Décision à prendre (2 cm livre / 4 cm tiers), à documenter et
-   couvrir par test.
+4. **Retrait de pointe de la pince de taille devant** : ~~décision à
+   prendre~~ tranché le 2026-07-15 — 2 cm du livre (C15, p. 75),
+   `PLATITUDE_POITRINE` en place dans `method.ts`, couvert par golden test.
 5. **Plafonds et répartition des pinces de taille** : devant ≤ 3, côtés ≤ 4,
    demi-dos ≤ 2, milieu dos ≤ 1-2 ; exemple normatif 1+2+2 / 2+3 (p. 55-57).
    Vérifier constantes et algorithme (déjà couverts par golden test).
 6. **Axe de la pince demi-dos** : mi-distance entre bras de la pince de côté
    et milieu dos / bras de la pince milieu dos quand elle existe (p. 55).
    Vérifier le cas « pince milieu dos non nulle ».
-7. **Haut de la pince demi-dos** : proposition v1 y_emmanchure + 2 ; les
-   planches montent jusque vers la ligne d'emmanchure (C20). Vérifier la
-   valeur et la borner par la ligne d'emmanchure.
+7. **Haut de la pince demi-dos** : ~~à vérifier~~ tranché le 2026-07-15 —
+   sommet posé SUR la ligne d'emmanchure, borne haute des planches (C20),
+   `SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE = 0` en place, couvert par golden
+   test.
 8. **Platitudes des pinces à la taille** : 2-4 cm, parts égales de part et
    d'autre de la taille, inversement proportionnelles à la valeur (p. 59) ;
    bras rectilignes arrêtés à la platitude, jonction légèrement courbée par
