@@ -35,14 +35,15 @@ Le projet est hébergé sur GitHub, déployé automatiquement sur GitHub Pages, 
 
 - Pièces v1 : **demi-dos et demi-devant du buste**, disposés en miroir (milieu dos à gauche, milieu devant à droite, comme les planches du livre).
 - Rendu SVG à l'écran avec zoom/pan, grille centimétrique, code couleur du livre (lignes de référence en rouge : milieux et taille ; tracé en noir ; lignes d'aide en gris).
-- **Mode construction** activable : affiche les lignes d'aide (carrure, emmanchure, ligne de poitrine), les points nommés, et les valeurs calculées (largeur d'encolure, valeur de pince bretelle, répartition des pinces de taille).
+- **Mode construction** activable : affiche les lignes d'aide (carrure, emmanchure, ligne de poitrine), les points nommés, et les valeurs calculées (largeur d'encolure, valeur de pince bretelle, répartition des pinces de taille). Les libellés des points sont placés par un calque anti-chevauchement calculé sur toutes les pièces à la fois (`ConstructionLabels` dans `render/svg.tsx`) : ancrage vers l'extérieur du dessin (noms du dos à gauche, du devant à droite, pour dégager l'entre-pièces), désempilage vertical itératif des noms qui se recouvrent, et trait de rappel vers le point quand le libellé s'est éloigné.
 - **Mode pas-à-pas** (bonus, cf. §5) : rejouer la construction étape par étape, chaque étape affichant son libellé — possible précisément parce que le moteur enregistre la séquence d'étapes.
 - Panneau de valeurs calculées avec avertissements quand la méthode le prévoit (ex. valeur à absorber à la taille exigeant une pince supplémentaire).
 
 ### 3.3 Export
 
-- **SVG échelle 1:1** : unités physiques en cm, carré de contrôle 10 cm, cartouche (mesures utilisées, date, pièce, mention « sans coutures »).
+- **SVG échelle 1:1** : unités physiques en cm, carré de contrôle 5 cm (demande de l'utilisatrice finale — tient sur une page A4 tuilée), cartouche (mesures utilisées, date, pièce, mention « sans coutures »).
 - **PDF multi-pages A4** (jalon M3) : tuilage du patron sur pages A4 avec marges d'impression, repères de collage (croix d'alignement et numérotation ligne/colonne), page de garde avec plan d'assemblage. C'est la fonctionnalité qui rend le projet réellement utilisable — la plupart des gens n'ont pas de traceur.
+- **Gabarit « sans pinces »** (option d'export future, hors v1) : le même tracé porte deux patrons (Gilewska p. 86-89) — le gabarit seul (tee-shirts, tuniques larges, tissus extensibles) et le patron complet avec pinces. Le gabarit est un sous-produit naturel du moteur (contour avant application des pinces, `buste.md` §20).
 
 ### 3.4 Pièces suivantes (après le buste)
 
@@ -206,7 +207,7 @@ Règle de travail avec Claude Code : **aucune modification du moteur sans test q
 | **M0** | Scaffolding : Vite + TS strict + Tailwind + Vitest, workflow GitHub Actions → Pages, page « hello » déployée | Le site est en ligne sur `<user>.github.io/patrons` |
 | **M1** | Noyau géométrique + `Draft` + buste complet dans le moteur, golden tests du livre au vert | `draftBuste(demo)` passe tous les tests, sans UI |
 | **M2** | UI : formulaire validé, profils localStorage, viewer SVG zoom/pan, mode construction, panneau des valeurs | Le buste du profil démo s'affiche conforme aux planches du livre |
-| **M3** | Exports : SVG 1:1 + PDF A4 tuilé avec repères d'assemblage | Un patron imprimé et scotché a le bon carré test de 10 cm |
+| **M3** | Exports : SVG 1:1 + PDF A4 tuilé avec repères d'assemblage | Un patron imprimé et scotché a le bon carré test de 5 cm |
 | **M4** | Jupe (moteur + tests + UI) | |
 | **M5** | Manche, avec mesure d'emmanchure inter-pièces + vérification tête de manche. Prévoir le **cran de montage à 1/3 de la longueur d'emmanchure mesurée sur la courbe** (repère dos/devant pour poser la manche — pratique relevée le 2026-07-07 en comparant une méthode tierce, anicka.design) | |
 | **M6** | Pantalon | |

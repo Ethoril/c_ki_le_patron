@@ -13,7 +13,7 @@ import { DEMO_MEASUREMENTS, checkCoherence, validateBounds } from "../src/engine
 import { repartirPincesTaille, METHOD } from "../src/engine/method";
 import { generate } from "../src/engine/generate";
 import { dist } from "../src/engine/geometry/point";
-import { curveLength, curveToPolyline } from "../src/engine/geometry/curve";
+import { curveLength, curveToPolyline, endTangent } from "../src/engine/geometry/curve";
 import { isClosed } from "../src/engine/geometry/path";
 
 // Les exemples chiffrés du livre supposent le patron de base SANS aisance ;
@@ -76,7 +76,9 @@ describe("golden : pinces de taille (88/68/92, p. 54-58)", () => {
   });
 
   it("aucun avertissement de pince supplémentaire", () => {
-    expect(report.warnings).toEqual([]);
+    // le rapport peut porter d'autres avertissements (ex. différence
+    // d'emmanchure, C17) : seul celui des pinces est exclu ici
+    expect(report.warnings.some((w) => w.code === "pince-supplementaire")).toBe(false);
   });
 });
 
@@ -130,6 +132,15 @@ describe("golden : points de construction du profil démo (v2)", () => {
     const l1 = dist(devant.points["snp-devant"], devant.points["pince-bretelle-1"]);
     const l2 = dist(devant.points["pince-bretelle-2"], devant.points["epaule-devant"]);
     expect(l1 + l2).toBeCloseTo(demo.longueurEpaule - METHOD.EMBU_EPAULE_DOS, 6);
+  });
+
+  it("rétablissement post-bretelle (C11) : carrure et bissectrice devant aux positions d'origine, pince ouverte", () => {
+    const largeurPlanche = demo.tourPoitrine / 2;
+    expect(devant.points["carrure-devant"].x).toBeCloseTo(largeurPlanche - demo.carrureDevant / 2, 6);
+    expect(devant.points["carrure-devant"].y).toBeCloseTo(demo.longueurDos / 3, 6);
+    const coin = { x: largeurPlanche - demo.carrureDevant / 2, y: demo.longueurDos / 2 };
+    expect(devant.points["bissectrice-devant"].x).toBeCloseTo(coin.x - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2, 6);
+    expect(devant.points["bissectrice-devant"].y).toBeCloseTo(coin.y - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2, 6);
   });
 
   it("contours fermés", () => {
@@ -204,13 +215,76 @@ describe("golden : allure du bas d'emmanchure (p. 42-44, note §6/D7)", () => {
   }
 });
 
-describe("golden : pointe de la pince devant (choix du 2026-07-07)", () => {
-  it("sommet à 4 cm sous le saillant — jamais sur le saillant", () => {
-    expect(METHOD.RETRAIT_SOMMET_PINCE_DEVANT).toBe(4);
+describe("golden : pointe de la pince devant — platitude de poitrine (C15, p. 75)", () => {
+  it("sommet à 2 cm sous le saillant (valeur du livre, décision 2026-07-15) — jamais sur le saillant", () => {
+    expect(METHOD.PLATITUDE_POITRINE).toBe(2);
     const { devant } = draftBuste(demo);
     const pince = devant.darts.find((d) => d.id === "pince-taille-devant")!;
     expect(pince.apex.x).toBeCloseTo(devant.points["saillant"].x, 6);
-    expect(pince.apex.y - devant.points["saillant"].y).toBeCloseTo(4, 6);
+    expect(pince.apex.y - devant.points["saillant"].y).toBeCloseTo(METHOD.PLATITUDE_POITRINE, 6);
+  });
+});
+
+describe("golden : haut de la pince demi-dos (C20, planches p. 55)", () => {
+  it("sommet posé SUR la ligne d'emmanchure — borne haute, jamais au-dessus (décision 2026-07-15)", () => {
+    expect(METHOD.SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE).toBe(0);
+    const { dos } = draftBuste(demo);
+    const pince = dos.darts.find((d) => d.id === "pince-demi-dos")!;
+    expect(pince.apex.y).toBeCloseTo(demo.longueurDos / 2 + METHOD.SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE, 6);
+  });
+});
+
+describe("golden : contrôle des longueurs d'emmanchure (C17, p. 65)", () => {
+  it("la plage normale de la méthode est [1, 2] cm", () => {
+    expect(METHOD.DIFFERENCE_EMMANCHURE_MIN).toBe(1);
+    expect(METHOD.DIFFERENCE_EMMANCHURE_MAX).toBe(2);
+  });
+
+  it("profil démo : différence ≈ 2,9 cm hors plage → avertissement NON bloquant", () => {
+    // constat documenté à l'audit du 2026-07-14 : le tracé v1 (pince d'épaule
+    // dos absorbée, tensions actuelles) produit un écart au-delà des 2 cm du
+    // livre — le contrôle sert précisément à le signaler, sans bloquer
+    const { report } = draftBuste(demo);
+    const diff = Math.abs(reportValue(report, "emmanchureDos") - reportValue(report, "emmanchureDevant"));
+    expect(diff).toBeGreaterThan(METHOD.DIFFERENCE_EMMANCHURE_MAX);
+    expect(report.warnings.some((w) => w.code === "difference-emmanchure")).toBe(true);
+  });
+});
+
+describe("golden : forme de l'encolure devant (C16 + continuité, p. 63-64)", () => {
+  const { dos, devant } = draftBuste(demo);
+  const snp = devant.points["snp-devant"];
+  const gorge = devant.points["gorge"];
+  const prof = gorge.y - snp.y;
+  const larg = gorge.x - snp.x;
+
+  it("arrive PERPENDICULAIRE à la ligne d'épaule devant (continuité à travers la couture)", () => {
+    const t = endTangent(devant.curves["encolure-devant"]);
+    expect((Math.atan2(t.y, t.x) * 180) / Math.PI).toBeCloseTo(-(90 + 26), 6);
+    // le dos arrive lui aussi ⊥ à sa propre épaule : assemblés, les deux
+    // courbes traversent la couture sans cassure (critère p. 63-64)
+    const tDos = endTangent(dos.curves["encolure-dos"]);
+    expect((Math.atan2(tDos.y, tDos.x) * 180) / Math.PI).toBeCloseTo(-(90 - 18), 6);
+  });
+
+  it("suit la verticale d'encolure sur ≈ profondeur/3 sous le point d'épaule (écart ≤ 2 mm, jamais au-delà)", () => {
+    const poly = curveToPolyline(devant.curves["encolure-devant"], 256);
+    const yV = snp.y + prof * METHOD.PLATITUDE_ENCOLURE_DEVANT;
+    const zone = poly.filter((p) => p.y <= yV + 1e-9);
+    expect(zone.length).toBeGreaterThan(4);
+    for (const p of zone) {
+      expect(p.x - snp.x).toBeGreaterThanOrEqual(-1e-6); // ne jamais échancrer au-delà de la verticale
+      expect(p.x - snp.x).toBeLessThanOrEqual(0.2);
+    }
+  });
+
+  it("platitude ≈ largeur/3 sur la ligne de gorge, et ne descend jamais sous la gorge", () => {
+    const poly = curveToPolyline(devant.curves["encolure-devant"], 256);
+    const xH = gorge.x - larg * METHOD.PLATITUDE_ENCOLURE_DEVANT;
+    for (const p of poly.filter((p) => p.x >= xH - 1e-9)) {
+      expect(Math.abs(p.y - gorge.y)).toBeLessThanOrEqual(0.01);
+    }
+    for (const p of poly) expect(p.y).toBeLessThanOrEqual(gorge.y + 1e-9);
   });
 });
 

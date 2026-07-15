@@ -88,6 +88,49 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
+  it("pince bretelle : la valeur se reporte du milieu d'épaule VERS l'emmanchure (C14)", () => {
+    for (const m of bodies) {
+      const { devant } = draftBuste(m);
+      const milieuX = (m.tourPoitrine + (m.aisance ?? 0)) / 2;
+      const pb1 = devant.points["pince-bretelle-1"];
+      const pb2 = devant.points["pince-bretelle-2"];
+      expect(Math.abs(milieuX - pb2.x), `pb2 côté emmanchure (${JSON.stringify(m)})`).toBeGreaterThan(
+        Math.abs(milieuX - pb1.x),
+      );
+    }
+  });
+
+  it("fermeture de bretelle (C11) : carrure devant et dessous-bras gardent leurs mesures d'origine", () => {
+    for (const m of bodies) {
+      const { devant } = draftBuste(m);
+      const largeurPlanche = (m.tourPoitrine + (m.aisance ?? 0)) / 2;
+      expect(devant.points["carrure-devant"].x).toBeCloseTo(largeurPlanche - m.carrureDevant / 2, 6);
+      expect(devant.points["carrure-devant"].y).toBeCloseTo(m.longueurDos / 3, 6);
+      expect(devant.points["dessous-bras"].x).toBeCloseTo(largeurPlanche / 2 - 1, 6);
+    }
+  });
+
+  it("sommets de pinces : demi-dos jamais au-dessus de la ligne d'emmanchure (C20) ; devant à la platitude de poitrine sous le saillant (C15)", () => {
+    for (const m of bodies) {
+      const { dos, devant } = draftBuste(m);
+      const demiDos = dos.darts.find((d) => d.id === "pince-demi-dos");
+      if (demiDos) expect(demiDos.apex.y).toBeGreaterThanOrEqual(m.longueurDos / 2 - 1e-9);
+      const pinceDevant = devant.darts.find((d) => d.id === "pince-taille-devant");
+      if (pinceDevant) {
+        expect(pinceDevant.apex.y - devant.points["saillant"].y).toBeCloseTo(METHOD.PLATITUDE_POITRINE, 6);
+      }
+    }
+  });
+
+  it("encolure devant : arrivée ⊥ à la ligne d'épaule devant, y compris avec pente d'épaule mesurée", () => {
+    for (const m of bodies.slice(0, 50)) {
+      const { devant, report } = draftBuste(m);
+      const angleDevant = report.values.find((v) => v.key === "angleEpauleDevant")!.value;
+      const t = endTangent(devant.curves["encolure-devant"]);
+      expect((Math.atan2(t.y, t.x) * 180) / Math.PI).toBeCloseTo(-(90 + angleDevant), 6);
+    }
+  });
+
   it("jambes de pince égalisées et bouche = valeur", () => {
     for (const m of bodies) {
       const { dos, devant } = draftBuste(m);

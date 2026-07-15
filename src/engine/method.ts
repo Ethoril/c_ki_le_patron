@@ -50,32 +50,69 @@ export const METHOD = {
    * la queue lèche la ligne d'emmanchure au repère de platitude.
    */
   TANGENTE_BISSECTRICE_DEG: 45,
+  /**
+   * Poignée d'arrivée du virage d'emmanchure, en fraction de la corde
+   * bissectrice → dessous-bras : à la demi-corde, le virage tient sa hauteur
+   * puis la queue lèche la ligne au repère de platitude. [transcription :
+   * calibrage sur les planches p. 42-44, validé livre en main 2026-07-07]
+   */
+  POIGNEE_ARRIVEE_EMMANCHURE: 0.5,
+  /**
+   * Contrôle des longueurs d'emmanchure : bien construites, les emmanchures
+   * dos et devant diffèrent de 1 à 2 cm (le sens dépend de la morphologie).
+   * Hors plage : inclinaison d'épaule ou répartition du tour de poitrine à
+   * vérifier — la manche sera difficile, voire impossible, à monter (p. 65,
+   * C17). Avertissement NON bloquant.
+   */
+  DIFFERENCE_EMMANCHURE_MIN: 1,
+  DIFFERENCE_EMMANCHURE_MAX: 2,
+
+  /**
+   * Platitudes de l'encolure devant : ≈ 1/3 de la largeur d'encolure sur la
+   * ligne de gorge (platitude horizontale) et ≈ 1/3 de la profondeur le long
+   * de la verticale d'encolure sous le point d'épaule (p. 64, C16). Repères
+   * imposés au tracé de la courbe.
+   */
+  PLATITUDE_ENCOLURE_DEVANT: 1 / 3,
 
   /** Valeur de la pince bretelle = tour de poitrine / 20 + 1 (p. 52 ; ex. 88 → 5,4). */
   PINCE_BRETELLE: (tourPoitrine: number) => tourPoitrine / 20 + 1,
 
   /**
    * Pince d'épaule dos, option « valeur absorbée » (p. 47, fig. 4) : pas de
-   * pince tracée, l'épaule dos garde ~1 cm d'excédent sur l'épaule devant,
-   * résorbé en embu au montage. [transcription : dos = épaule mesurée,
-   * devant = épaule − 1 ; l'alternative dos = épaule + 1 est notée dans la
-   * note de méthode]
+   * pince tracée, l'épaule dos garde 1 cm d'excédent sur l'épaule devant —
+   * dos plus long, sens confirmé par la relecture v3 (C12) —, résorbé en
+   * embu au montage (bords en faux biais). Cible v3+ : tracer la vraie pince
+   * (PINCE_EPAULE_DOS_*, buste.md C12-C13, §8). [transcription : dos =
+   * épaule mesurée, devant = épaule − 1]
    */
   EMBU_EPAULE_DOS: 1,
+  /**
+   * Pince d'épaule dos, construction du livre (p. 46-48) : axe au milieu de
+   * la largeur d'épaule, perpendiculaire à la ligne d'épaule inclinée,
+   * largeur ≈ 1 cm (jusqu'à 2 si dos arrondi, alors longueur 5), longueur
+   * 7 cm. NON TRACÉE en v1/v2 (option absorbée ci-dessus) — constantes
+   * documentées pour la cible v3+ (buste.md C12-C13).
+   */
+  PINCE_EPAULE_DOS_LARGEUR: 1,
+  PINCE_EPAULE_DOS_LONGUEUR: 7,
 
   /**
-   * Sommet de la pince de taille devant : 4 cm sous le saillant — la pointe
-   * ne tombe jamais sur le saillant. [transcription : non chiffré par le
-   * livre (planches p. 54) ; 4 cm retenus le 2026-07-07 par recoupement
-   * externe (anicka.design), à confirmer à l'essayage]
+   * Platitude de poitrine : ≈ 2 cm entre le saillant et l'extrémité de
+   * chaque pince qui y converge (bretelle, taille), pour éviter le bec de
+   * poitrine ; à ajuster à l'essayage selon le volume (p. 75). Sert de
+   * retrait de pointe à la pince de taille devant (C15 — décision du
+   * 2026-07-15 : valeur du livre, remplace les 4 cm d'origine tierce).
+   * [À VALIDER à l'essayage]
    */
-  RETRAIT_SOMMET_PINCE_DEVANT: 4,
+  PLATITUDE_POITRINE: 2,
   /**
-   * Sommet de la pince demi-dos : 2 cm au-dessus de la ligne d'emmanchure,
-   * entre emmanchure et carrure comme sur les planches (p. 55, fig. 2).
-   * [transcription : le livre ne chiffre pas cette hauteur]
+   * Sommet de la pince demi-dos : posé SUR la ligne d'emmanchure (0 cm sous
+   * la ligne). Les planches p. 55 (fig. 2) font monter le haut de pince
+   * jusque vers la ligne d'emmanchure ; borne haute = la ligne, jamais
+   * au-dessus (C20 — décision du 2026-07-15). [À VALIDER à l'essayage]
    */
-  RETRAIT_SOMMET_PINCE_DOS: 2,
+  SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE: 0,
 
   /** Plafonds de répartition des pinces de taille (p. 55). */
   PLAFOND_PINCE_DEVANT: 3,
@@ -97,7 +134,24 @@ export const METHOD = {
   TENSION: {
     emmanchureDos: 0,
     emmanchureDevant: 0,
+    encolureDevant: 0,
   },
+
+  // ——— Patron d'essayage (p. 66-68) : constantes documentées pour le jalon
+  // dédié, non utilisées par le moteur v1. L'aisance produit est une approche
+  // distincte qui ne s'y cumule pas (buste.md §14 et §Extensions hors livre).
+  /** Élargissement de base : parallèle à la ligne d'épaule à +1 cm (p. 66). */
+  ELARGISSEMENT_EPAULE: 1,
+  /** Élargissement de base : ligne d'emmanchure abaissée de 2 cm (p. 66). */
+  ELARGISSEMENT_EMMANCHURE: 2,
+  /** Élargissement de base : côtés +1 cm, dos ET devant (p. 66). */
+  ELARGISSEMENT_COTE: 1,
+  /** Marge de couture générale : 1 cm (p. 67). */
+  MARGE_COUTURE: 1,
+  /** Marge du côté sur la toile d'essayage : 2 à 3 cm, pour corriger la ligne de côté (p. 67, 82). */
+  MARGE_COTE_TOILE: [2, 3],
+  /** Croisure du patron d'essayage : parallèle au milieu devant à 2-3 cm (p. 68). */
+  CROISURE: [2, 3],
 } as const;
 
 /** Répartition de la valeur à absorber à la taille U = (poitrine − taille)/4, par quart (p. 54-58). */

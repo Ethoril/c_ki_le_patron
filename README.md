@@ -8,8 +8,10 @@ reproduction du livre dans ce dépôt).
 
 Le tracé est consultable à l'écran (zoom/pan, grille centimétrique, mode
 construction avec points nommés) et exportable en **SVG à l'échelle 1:1** avec
-carré de contrôle de 10 cm et cartouche. Le patron de base est produit **sans
-valeurs de couture ni aisance**, conformément à la méthode.
+carré de contrôle de 5 cm et cartouche. Le patron de base est produit **sans
+valeurs de couture**, conformément à la méthode ; une **aisance optionnelle**
+(défaut 2 cm au tour, réglable de 0 à 5) élargit le gabarit — à 0, le tracé
+est exactement celui du livre.
 
 ## Vie privée
 
