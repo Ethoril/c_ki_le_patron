@@ -81,7 +81,7 @@ pente d'épaule > 0,7 × longueur d'épaule (angle plafonné à 45°).
 | 1 | `nuque` | (0 ; profondeur encolure dos) — **sous** la ligne d'épaule | (0 ; 2,375) |
 | 2 | `snp-dos` | (largeur encolure ; 0) — **sur** la ligne d'épaule | (7,33 ; 0) |
 | 3 | Encolure dos | courbe de `nuque` à `snp-dos` ; tangente **horizontale** à la nuque (platitude du milieu dos, p. 63) ; arrivée **perpendiculaire à l'épaule** ⚠ à valider à l'essayage | — |
-| 4 | `epaule-dos` | depuis `snp-dos`, droite à **18° sous l'horizontale** (ou angle déduit de la pente d'épaule mesurée), longueur = **épaule mesurée** (pince d'épaule absorbée, p. 47) | (19,70 ; 4,02) |
+| 4 | Pince d'épaule dos + `epaule-dos` | jambes espacées de **1 cm** autour du milieu de l'épaule, axe perpendiculaire de **7 cm** ; fermeture jambe 2 → jambe 1, épaule rectifiée à **18°** (ou angle mesuré) et à la longueur d'épaule, puis pointe rouverte par l'inverse | voir snapshot M3.1 |
 | 5 | `carrure-dos` | (carrure dos / 2 ; y carrure) | (17,5 ; 13,67) |
 | 6 | `bissectrice-dos` | coin (carrure dos/2 ; y emmanchure) + **1,5 cm** sur la bissectrice à 45° vers le haut-côté : +1,5·√2/2 en x, −1,5·√2/2 en y | (18,56 ; 19,44) |
 | 7 | `platitude-dos` | **repère** à (x côté − **1** ; y emmanchure) — la queue du virage lèche la ligne à son niveau (~1 mm), ce n'est pas un point de passage exact | (20 ; 20,5) |
@@ -89,7 +89,7 @@ pente d'épaule > 0,7 × longueur d'épaule (angle plafonné à 45°).
 | 9 | Emmanchure dos | spline 4-5-6 avec tangente **imposée à 45°** au point de bissectrice (la courbe coupe la bissectrice à angle droit, p. 42-44), puis **une seule cubique** 6 → 8 à courbure continue (coup de perroquet), raccordée **C1** ; arrivée exactement horizontale au dessous-bras | longueur mesurée 18,63 |
 | 10 | Côté dos | **droite** de `dessous-bras` à (x côté − pince de côté ; y taille) | → (19 ; 41) |
 | 11 | Milieu dos cintré | droite de (milieu dos ; y taille) à (0 ; **y emmanchure**), puis verticale jusqu'à la nuque | (1 ; 41) → (0 ; 20,5) |
-| 12 | Pince demi-dos | axe = milieu entre milieu dos cintré et côté cintré à la taille ; sommet à **2 cm au-dessus** de la ligne d'emmanchure ⚠ interprétation ; jambes à ± valeur/2 sur la taille | axe x = 10 ; sommet (10 ; 18,5) |
+| 12 | Pince demi-dos | axe = milieu entre milieu dos cintré et côté cintré à la taille ; sommet **sur la ligne d'emmanchure** (C20) ; jambes à ± valeur/2 sur la taille | axe x = 10 ; sommet (10 ; 20,5) |
 
 ## 6. Demi-devant, point par point
 
@@ -99,16 +99,16 @@ pente d'épaule > 0,7 × longueur d'épaule (angle plafonné à 45°).
 | 2 | `gorge` | (44 ; y épaule devant + profondeur encolure devant) | (44 ; 6,33) |
 | 3 | Encolure devant | courbe gorge → snp ; tangente **horizontale à la gorge**, arrivée **verticale** au point d'épaule (suit la verticale d'encolure, p. 63) | — |
 | 4 | `saillant` | (44 − écart/2 ; y poitrine) — hauteur de poitrine portée **verticalement** | (35 ; 23) |
-| 5 | Épaule provisoire | depuis `snp-devant`, droite à **26° sous l'horizontale** vers le côté (direction 180 − 26 = 154° ; angle dos mesuré + 8° si la pente est renseignée), longueur = **épaule − 1** (embu de la pince d'épaule dos absorbée, p. 47) ⚠ à valider | 12 cm |
-| 6 | `pince-bretelle-1` | milieu de l'épaule provisoire (épaule devant / 2) | (31,27 ; −0,37) |
-| 7 | Ouverture de la pince | **pivot autour du saillant** d'un angle θ = 2·arcsin( v / (2·jambe) ), v = poitrine/20 + 1, jambe = distance pb1→saillant. Le pivot égalise automatiquement les deux jambes | jambe = 23,67 ; θ = **13,10°** |
-| 8 | `pince-bretelle-2` | pb1 pivoté de −θ autour du saillant | (26,07 ; 1,08) |
-| 9 | `epaule-devant` | extrémité provisoire pivotée de −θ ; la seconde moitié d'épaule (pb2 → extrémité) garde sa longueur de 6 cm | (21,42 ; 4,87) |
-| 10 | `carrure-devant` | (44 − carrure devant/2 ; y carrure) — **non pivotée** (la pince est fermée avant le tracé de l'emmanchure dans le livre ; choix documenté : seuls l'épaule et le haut d'emmanchure pivotent) | (27,5 ; 13,67) |
-| 11 | `bissectrice-devant` | coin (44 − carrure devant/2 ; y emmanchure) + **2,5 cm** à 45° vers le haut-côté : −2,5·√2/2 en x, −2,5·√2/2 en y | (25,73 ; 18,73) |
-| 12 | `platitude-devant` | **repère** à (x côté + 1 ; y emmanchure) — même rôle qu'au dos | (22 ; 20,5) |
-| 13 | Emmanchure devant | spline 9-10-11 avec tangente imposée à 45° à la bissectrice, puis une seule cubique 11 → `dessous-bras` (21 ; 20,5), raccord C1, arrivée horizontale | longueur mesurée 21,54 |
-| 14 | Pince devant | axe vertical **par le saillant** ; sommet à **4 cm sous** le saillant (jamais sur le saillant, choix 2026-07-07) ; jambes ± valeur/2 sur la taille | sommet (35 ; 27) |
+| 5 | Épaule provisoire fermée | depuis `snp-devant`, droite à **26° sous l'horizontale** vers le côté (direction 180 − 26 = 154° ; angle dos mesuré + 8° si la pente est renseignée), longueur = **épaule mesurée** ; l'embu −1 cm appartient seulement à la variante absorbée | 13 cm |
+| 6 | `pince-bretelle-1` | milieu de l'épaule provisoire (épaule devant / 2) | (30,82 ; −0,15) |
+| 7 | Ouverture de la pince | **pivot autour du saillant** d'un angle θ = 2·arcsin( v / (2·jambe) ), v = poitrine/20 + 1, jambe = distance pb1→saillant. Le pivot égalise automatiquement les deux jambes | jambe = 23,52 ; θ = **13,18°** |
+| 8 | `pince-bretelle-2` | pb1 pivoté de −θ autour du saillant | (25,66 ; 1,41) |
+| 9 | `epaule-devant` | extrémité provisoire pivotée de −θ ; la seconde moitié d'épaule (pb2 → extrémité) garde sa longueur de 6,5 cm | (20,62 ; 5,52) |
+| 10 | `carrure-devant` | référence fermée (44 − carrure devant/2 ; y carrure), reportée vers l'extérieur de la largeur `δ(y)` interceptée par la pince (C11) | référence (27,5 ; 13,67), δ = 2,36 → **(25,14 ; 13,67)** |
+| 11 | `bissectrice-devant` | référence à **2,5 cm** du coin, reportée de `δ(y)` évalué à sa hauteur | référence (25,73 ; 18,73), δ = 1,08 → **(24,65 ; 18,73)** |
+| 12 | `platitude-devant` | repère à 1 cm du dessous-bras, translaté avec le report de la ligne d'emmanchure | δ = 0,63 → **(21,37 ; 20,5)** |
+| 13 | Emmanchure devant | spline 9-10-11 après rétablissement C11, puis une seule cubique 11 → `dessous-bras` **ouvert** (20,37 ; 20,5), raccord C1, arrivée horizontale | longueur mesurée **19,39** ; dos 17,61 ; écart **1,77** |
+| 14 | Pince devant | axe vertical **par le saillant** ; sommet géométrique **au saillant** (C15) ; l'arrêt ≈ 2 cm avant la pointe est une instruction de montage, pas un retrait dessiné ; jambes ± valeur/2 sur la taille | sommet (35 ; 23) |
 | 15 | Côté devant | droite de `dessous-bras` à (x côté + pince de côté ; y taille) | → (23 ; 41) |
 
 ## 7. Répartition des pinces de taille (p. 54-58)
@@ -158,19 +158,20 @@ pince demi-dos 2 → platitude 3. Constante : `PLATITUDE_PINCE`.
   équivalent du blanc de 10-15 cm des planches (p. 35). Aucun chevauchement
   possible, quelles que soient les mesures. Les longueurs sont mesurées avant
   translation.
-- Avertissements émis par le moteur : `pince-supplementaire` (répartition) +
-  les 4 contrôles de cohérence des mesures (§2).
+- Avertissements émis par le moteur : `pince-supplementaire`,
+  `difference-emmanchure`, pente plafonnée et contrôles de cohérence des
+  mesures. Les contrôles assemblés sont aussi exposés dans le rapport moteur.
 
-## 10. Points à vérifier en priorité (⚠)
+## 10. Points restant à vérifier après M3.1 (⚠)
 
 | Sujet | Ce que fait le moteur | Doute |
 |---|---|---|
-| Arrivée de l'encolure dos | perpendiculaire à la ligne d'épaule inclinée | le livre trace au perroquet sans chiffrer l'angle — à valider à l'essayage |
-| Embu d'épaule | dos = épaule mesurée, devant = épaule − 1 | l'alternative dos = épaule + 1, devant = épaule est possible (fig. 4 p. 47 ambiguë) |
-| Sommet pince demi-dos | 2 cm **au-dessus** de la ligne d'emmanchure (entre emmanchure et carrure, comme les planches p. 55) | la note de méthode disait « y emmanchure + 2 » (= dessous) ; interprétation planches retenue |
-| Sommet pince devant | 4 cm sous le saillant | non chiffré par le livre ; 4 cm par recoupement externe (anicka.design), validé le 2026-07-07, à confirmer à l'essayage |
+| Arrivée de l'encolure dos | continuité assemblée vérifiée à 0,5° | allure du perroquet à confirmer sur pièce avant de retoucher la tension |
+| Pince d'épaule dos | vraie pince 1 × 7 cm, épaule rectifiée fermée puis rouverte | largeur standard issue de l'ambiguïté C13 ; ajustement morphologique futur |
+| Longueurs d'emmanchure | mesure dos/devant + avertissement hors [1, 2] cm | profil démo à 1,77 cm après correction C11 ; le contrôle reste morphologique et ne force jamais la courbe |
+| Jonction côté basse | fraction 0,75 de la hauteur de bassin | choix de transcription à confirmer à l'essayage |
 | Pente d'épaule mesurée | angle dos = asin(pente/épaule), devant = dos + 8° | le report du différentiel 26 − 18 est un choix de transcription, à valider à l'essayage |
-| Rotation pince bretelle | seuls seconde moitié d'épaule et extrémité pivotent ; carrure/bissectrice/dessous-bras fixes | choix documenté (D6) ; le livre ferme la pince avant de tracer l'emmanchure |
+| Rotation pince bretelle | transformation réversible de l'épaule, puis reports horizontaux `δ(y)` sur carrure, bissectrice, platitude et dessous-bras ouverts | C11 ; les largeurs utiles après absorption retrouvent les références fermées |
 | Platitude des pinces | formule 5 − valeur bornée 2..4 | le livre donne la proportion en mots, pas en formule |
 | Tension des splines | 0 partout | à ajuster visuellement contre les planches (p. 42 : seul le point de bissectrice peut bouger) |
 | Poignées du virage d'emmanchure | m1 borné (spline / bissectrice / corde÷3), m2 = corde/2 | chiffres calibrés visuellement sur les planches (validé livre en main 2026-07-07), pas donnés par le livre — verrouillés par les golden tests (tenue à mi-virage, queue au repère) |

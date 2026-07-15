@@ -16,6 +16,7 @@ import { dartOutline } from "../src/engine/drafting";
 import { dist } from "../src/engine/geometry/point";
 import { curveLength, curveToPolyline, endTangent, startTangent } from "../src/engine/geometry/curve";
 import { isClosed } from "../src/engine/geometry/path";
+import { closeDart, reopenDart } from "../src/engine/assembly";
 
 // Les exemples chiffrés du livre supposent le patron de base SANS aisance ;
 // le profil de démonstration porte l'aisance produit par défaut (2 cm).
@@ -83,8 +84,8 @@ describe("golden : pinces de taille (88/68/92, p. 54-58)", () => {
   });
 });
 
-describe("golden : points de construction du profil démo (v2)", () => {
-  const { dos, devant } = draftBuste(demo);
+describe("golden : points de construction du profil démo (M3.1)", () => {
+  const { dos, devant, report } = draftBuste(demo);
   const yTaille = demo.longueurDos; // C1 : longueur dos depuis la ligne d'épaule
   const xCote = demo.tourPoitrine / 4 - 1; // C5 : largeur dos = poitrine/4 − 1
 
@@ -95,10 +96,15 @@ describe("golden : points de construction du profil démo (v2)", () => {
     expect(dos.points["snp-dos"].y).toBeCloseTo(0);
   });
 
-  it("dos : extrémité d'épaule à 18°, longueur épaule mesurée", () => {
+  it("dos : épaule fermée rectifiée à 18°, longueur épaule mesurée", () => {
     const lEnc = 38 / 6 + 1;
-    expect(dos.points["epaule-dos"].x).toBeCloseTo(lEnc + 13 * Math.cos((18 * Math.PI) / 180), 3);
-    expect(dos.points["epaule-dos"].y).toBeCloseTo(13 * Math.sin((18 * Math.PI) / 180), 3);
+    const pince = dos.darts.find((d) => d.id === "pince-epaule-dos")!;
+    const epauleFermee = closeDart(pince, dos.points["epaule-dos"]);
+    expect(epauleFermee.x).toBeCloseTo(lEnc + 13 * Math.cos((18 * Math.PI) / 180), 6);
+    expect(epauleFermee.y).toBeCloseTo(13 * Math.sin((18 * Math.PI) / 180), 6);
+    expect(
+      dist(dos.points["snp-dos"], pince.legs[0]) + dist(pince.legs[0], epauleFermee),
+    ).toBeCloseTo(demo.longueurEpaule, 6);
   });
 
   it("lignes du gabarit : emmanchure = longueur dos/2, carrure = longueur dos/3 (C3, C4)", () => {
@@ -107,9 +113,11 @@ describe("golden : points de construction du profil démo (v2)", () => {
     expect(dos.points["carrure-dos"].x).toBeCloseTo(demo.carrureDos / 2, 6);
   });
 
-  it("lignes de côté dos et devant coïncident à poitrine/4 − 1 (C5)", () => {
+  it("ligne de côté dos à poitrine/4 − 1 ; devant rétabli vers l'extérieur (C5, C11)", () => {
     expect(dos.points["dessous-bras"].x).toBeCloseTo(xCote, 6);
-    expect(devant.points["dessous-bras"].x).toBeCloseTo(xCote, 6);
+    expect(
+      devant.points["dessous-bras"].x + reportValue(report, "retablissementEmmanchureDevant"),
+    ).toBeCloseTo(xCote, 6);
     expect(devant.points["dessous-bras"].y).toBeCloseTo(dos.points["dessous-bras"].y, 6);
   });
 
@@ -129,24 +137,74 @@ describe("golden : points de construction du profil démo (v2)", () => {
     expect(dos.points["taille-milieu-dos"].y).toBeCloseTo(yTaille);
   });
 
-  it("épaule devant = épaule − 1 (embu de la pince d'épaule dos absorbée, C9)", () => {
+  it("épaules dos/devant fermées = longueur mesurée (vraie pince dos, C12-C13)", () => {
     const l1 = dist(devant.points["snp-devant"], devant.points["pince-bretelle-1"]);
     const l2 = dist(devant.points["pince-bretelle-2"], devant.points["epaule-devant"]);
-    expect(l1 + l2).toBeCloseTo(demo.longueurEpaule - METHOD.EMBU_EPAULE_DOS, 6);
+    expect(l1 + l2).toBeCloseTo(demo.longueurEpaule, 6);
+    const pinceDos = dos.darts.find((d) => d.id === "pince-epaule-dos")!;
+    const epauleDosFermee = closeDart(pinceDos, dos.points["epaule-dos"]);
+    const longueurDosFermee =
+      dist(dos.points["snp-dos"], pinceDos.legs[0]) + dist(pinceDos.legs[0], epauleDosFermee);
+    expect(longueurDosFermee).toBeCloseTo(demo.longueurEpaule, 6);
   });
 
-  it("rétablissement post-bretelle (C11) : carrure et bissectrice devant aux positions d'origine, pince ouverte", () => {
+  it("rétablissement post-bretelle (C11) : les largeurs utiles retrouvent les références", () => {
     const largeurPlanche = demo.tourPoitrine / 2;
-    expect(devant.points["carrure-devant"].x).toBeCloseTo(largeurPlanche - demo.carrureDevant / 2, 6);
+    expect(reportValue(report, "retablissementCarrureDevant")).toBeCloseTo(2.356569664704196, 9);
+    expect(reportValue(report, "retablissementBissectriceDevant")).toBeCloseTo(1.07756680043439, 9);
+    expect(reportValue(report, "retablissementEmmanchureDevant")).toBeCloseTo(0.6312240173314763, 9);
+    expect(
+      devant.points["carrure-devant"].x + reportValue(report, "retablissementCarrureDevant"),
+    ).toBeCloseTo(largeurPlanche - demo.carrureDevant / 2, 6);
     expect(devant.points["carrure-devant"].y).toBeCloseTo(demo.longueurDos / 3, 6);
     const coin = { x: largeurPlanche - demo.carrureDevant / 2, y: demo.longueurDos / 2 };
-    expect(devant.points["bissectrice-devant"].x).toBeCloseTo(coin.x - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2, 6);
+    expect(
+      devant.points["bissectrice-devant"].x + reportValue(report, "retablissementBissectriceDevant"),
+    ).toBeCloseTo(coin.x - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2, 6);
     expect(devant.points["bissectrice-devant"].y).toBeCloseTo(coin.y - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2, 6);
   });
 
   it("contours fermés", () => {
     expect(isClosed(dos.outline, 1e-6)).toBe(true);
     expect(isClosed(devant.outline, 1e-6)).toBe(true);
+  });
+});
+
+describe("M3.1 : vraie pince d'épaule dos et vues assemblées", () => {
+  const { dos, devant, report } = draftBuste(demo);
+  const pince = dos.darts.find((d) => d.id === "pince-epaule-dos")!;
+
+  it("pince dos : bouche 1 cm, axe 7 cm et jambes égales (C12-C13, p. 46-48)", () => {
+    expect(pince.value).toBe(METHOD.PINCE_EPAULE_DOS_LARGEUR);
+    expect(dist(pince.legs[0], pince.legs[1])).toBeCloseTo(METHOD.PINCE_EPAULE_DOS_LARGEUR, 6);
+    expect(dist(pince.axis[0], pince.axis[1])).toBeCloseTo(METHOD.PINCE_EPAULE_DOS_LONGUEUR, 6);
+    expect(dist(pince.legs[0], pince.pivot)).toBeCloseTo(dist(pince.legs[1], pince.pivot), 6);
+  });
+
+  it("fermeture puis réouverture superpose les jambes et restitue la pointe d'épaule", () => {
+    expect(closeDart(pince, pince.legs[1])).toEqual(pince.legs[0]);
+    const fermee = closeDart(pince, dos.points["epaule-dos"]);
+    const rouverte = reopenDart(pince, fermee);
+    expect(rouverte.x).toBeCloseTo(dos.points["epaule-dos"].x, 10);
+    expect(rouverte.y).toBeCloseTo(dos.points["epaule-dos"].y, 10);
+  });
+
+  it("encolure et emmanchure sont continues dans la vue épaules assemblées", () => {
+    expect(report.assemblyChecks.map((check) => check.id)).toEqual([
+      "encolure-assemblee",
+      "emmanchure-assemblee",
+    ]);
+    for (const check of report.assemblyChecks) {
+      expect(check.passed, JSON.stringify(check)).toBe(true);
+      expect(check.gapCm).toBeLessThanOrEqual(check.tolerance.gapCm);
+      expect(check.lengthDifferenceCm).toBeLessThanOrEqual(check.tolerance.lengthCm);
+      expect(check.tangentMismatchDeg).toBeLessThanOrEqual(check.tolerance.tangentDeg);
+    }
+  });
+
+  it("les coutures principales sont nommées sur les deux pièces", () => {
+    expect(Object.keys(dos.seams).sort()).toEqual(["bassin", "cote", "emmanchure", "encolure", "epaule", "milieu"]);
+    expect(Object.keys(devant.seams).sort()).toEqual(["bassin", "cote", "emmanchure", "encolure", "epaule", "milieu"]);
   });
 });
 
@@ -360,14 +418,13 @@ describe("golden : contrôle des longueurs d'emmanchure (C17, p. 65)", () => {
     expect(METHOD.DIFFERENCE_EMMANCHURE_MAX).toBe(2);
   });
 
-  it("profil démo : différence ≈ 2,9 cm hors plage → avertissement NON bloquant", () => {
-    // constat documenté à l'audit du 2026-07-14 : le tracé v1 (pince d'épaule
-    // dos absorbée, tensions actuelles) produit un écart au-delà des 2 cm du
-    // livre — le contrôle sert précisément à le signaler, sans bloquer
+  it("profil démo M3.1 : le rétablissement C11 ramène naturellement l'écart dans la plage", () => {
     const { report } = draftBuste(demo);
     const diff = Math.abs(reportValue(report, "emmanchureDos") - reportValue(report, "emmanchureDevant"));
-    expect(diff).toBeGreaterThan(METHOD.DIFFERENCE_EMMANCHURE_MAX);
-    expect(report.warnings.some((w) => w.code === "difference-emmanchure")).toBe(true);
+    expect(diff).toBeCloseTo(1.774525534784307, 9);
+    expect(diff).toBeGreaterThanOrEqual(METHOD.DIFFERENCE_EMMANCHURE_MIN);
+    expect(diff).toBeLessThanOrEqual(METHOD.DIFFERENCE_EMMANCHURE_MAX);
+    expect(report.warnings.some((w) => w.code === "difference-emmanchure")).toBe(false);
   });
 });
 
@@ -466,7 +523,9 @@ describe("extension : pente d'épaule mesurée (buste.md §Extensions hors livre
 
   it("pente 5 : dénivelé d'épaule dos = 5 cm exactement, devant = angle dos + 8°", () => {
     const avec = draftBuste({ ...demo, penteEpaule: 5 });
-    expect(avec.dos.points["epaule-dos"].y).toBeCloseTo(5, 6);
+    const pinceDos = avec.dos.darts.find((d) => d.id === "pince-epaule-dos")!;
+    const epauleDosFermee = closeDart(pinceDos, avec.dos.points["epaule-dos"]);
+    expect(epauleDosFermee.y).toBeCloseTo(5, 6);
     const angleDos = (Math.asin(5 / 13) * 180) / Math.PI;
     expect(reportValue(avec.report, "angleEpauleDos")).toBeCloseTo(angleDos, 6);
     expect(reportValue(avec.report, "angleEpauleDevant")).toBeCloseTo(angleDos + 8, 6);

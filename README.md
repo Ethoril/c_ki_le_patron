@@ -7,11 +7,15 @@ sur mesure*, Eyrolles — cité comme référence bibliographique, aucune
 reproduction du livre dans ce dépôt).
 
 Le tracé est consultable à l'écran (zoom/pan, grille centimétrique, mode
-construction avec points nommés) et exportable en **SVG à l'échelle 1:1** avec
-carré de contrôle de 5 cm et cartouche. Le patron de base est produit **sans
-valeurs de couture**, conformément à la méthode ; une **aisance optionnelle**
-(défaut 2 cm au tour, réglable de 0 à 5) élargit le gabarit — à 0, le tracé
-est exactement celui du livre.
+construction avec points nommés) et exportable en **SVG à l'échelle 1:1** ou
+en **PDF A4 tuilé** avec repères d'assemblage, plan de montage et carré de
+contrôle de 5 cm. Le patron de base est produit **sans valeurs de couture**,
+conformément à la méthode ; une **aisance optionnelle** (défaut 2 cm au tour,
+réglable de 0 à 5) élargit le gabarit — à 0, le tracé est exactement celui du
+livre.
+
+Pour le PDF, imprimer à **100 % / taille réelle**, sans ajustement automatique.
+Le contrôle physique du carré de 5 cm reste recommandé avant tout assemblage.
 
 ## Vie privée
 
