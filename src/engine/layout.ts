@@ -41,6 +41,7 @@ function moveDart(d: Dart, dx: number, dy: number): Dart {
     ...d,
     legs: [movePt(d.legs[0], dx, dy), movePt(d.legs[1], dx, dy)],
     apex: movePt(d.apex, dx, dy),
+    apexBas: d.apexBas ? movePt(d.apexBas, dx, dy) : undefined,
     axis: [movePt(d.axis[0], dx, dy), movePt(d.axis[1], dx, dy)],
   };
 }
