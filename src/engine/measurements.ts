@@ -31,9 +31,15 @@ export type Measurements = {
    */
   penteEpaule?: number;
   /**
+   * Hauteur de bassin (cm, OPTIONNELLE) : de la taille à la partie la plus
+   * forte du bassin (p. 23). Absente = standard 20 cm de la méthode,
+   * petites hanches à mi-distance (generalites §6, p. 24 ; FDA : 17-23 cm).
+   */
+  hauteurBassin?: number;
+  /**
    * Aisance globale (cm au tour, OPTIONNELLE, 0–5, défaut produit 2) :
-   * ajoutée aux tours de poitrine et de taille avant division (buste.md
-   * §Extensions hors livre). Absente = 0 = patron de base du livre.
+   * ajoutée aux tours de poitrine, de taille et de bassin avant division
+   * (buste.md §Extensions hors livre). Absente = 0 = patron de base du livre.
    */
   aisance?: number;
 };
@@ -60,6 +66,15 @@ export const MEASUREMENT_FIELDS: MeasurementField[] = [
   { key: "tourCou", label: "Tour de cou", group: "contours", min: 26, max: 55 },
   { key: "longueurDos", label: "Longueur dos", group: "longueurs", min: 30, max: 60 },
   { key: "longueurDevant", label: "Longueur devant", group: "longueurs", min: 30, max: 65 },
+  {
+    key: "hauteurBassin",
+    label: "Hauteur de bassin",
+    group: "longueurs",
+    min: 12,
+    max: 30,
+    optional: true,
+    hint: "Optionnelle — de la taille au plus fort du bassin ; à vide, standard de la méthode (20 cm).",
+  },
   { key: "carrureDos", label: "Carrure dos", group: "largeurs", min: 26, max: 55 },
   { key: "carrureDevant", label: "Carrure devant", group: "largeurs", min: 24, max: 52 },
   { key: "longueurEpaule", label: "Longueur d'épaule", group: "largeurs", min: 8, max: 20 },

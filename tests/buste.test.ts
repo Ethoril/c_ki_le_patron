@@ -12,8 +12,9 @@ import { draftBuste, reportValue } from "../src/engine/pieces/buste";
 import { DEMO_MEASUREMENTS, checkCoherence, validateBounds } from "../src/engine/measurements";
 import { repartirPincesTaille, METHOD } from "../src/engine/method";
 import { generate } from "../src/engine/generate";
+import { dartOutline } from "../src/engine/drafting";
 import { dist } from "../src/engine/geometry/point";
-import { curveLength, curveToPolyline, endTangent } from "../src/engine/geometry/curve";
+import { curveLength, curveToPolyline, endTangent, startTangent } from "../src/engine/geometry/curve";
 import { isClosed } from "../src/engine/geometry/path";
 
 // Les exemples chiffrés du livre supposent le patron de base SANS aisance ;
@@ -215,13 +216,132 @@ describe("golden : allure du bas d'emmanchure (p. 42-44, note §6/D7)", () => {
   }
 });
 
-describe("golden : pointe de la pince devant — platitude de poitrine (C15, p. 75)", () => {
-  it("sommet à 2 cm sous le saillant (valeur du livre, décision 2026-07-15) — jamais sur le saillant", () => {
-    expect(METHOD.PLATITUDE_POITRINE).toBe(2);
+describe("golden : bas du buste jusqu'au bassin (92/68, p. 55-62 ; ét. 5 p. 33, ét. 11 p. 35)", () => {
+  const { dos, devant, report } = draftBuste(demo);
+  const yTaille = demo.longueurDos; // 41
+  const yBassin = yTaille + METHOD.HAUTEUR_BASSIN_STANDARD; // hauteurBassin absente = 20
+  const yPetitesHanches = yTaille + METHOD.HAUTEUR_BASSIN_STANDARD / 2;
+  const largeurPlanche = demo.tourPoitrine / 2; // 44
+
+  it("hauteur de bassin absente = standard 20 cm ; petites hanches à mi-distance (generalites §6, p. 24)", () => {
+    expect(METHOD.HAUTEUR_BASSIN_STANDARD).toBe(20);
+    expect(dos.points["bassin-cote"].y).toBeCloseTo(61, 6);
+    expect(devant.points["bassin-cote"].y).toBeCloseTo(61, 6);
+    // mesurée → elle remplace le standard
+    const mesuree = draftBuste({ ...demo, hauteurBassin: 18 });
+    expect(mesuree.dos.points["bassin-cote"].y).toBeCloseTo(41 + 18, 6);
+    expect(reportValue(mesuree.report, "hauteurBassin")).toBe(18);
+  });
+
+  it("largeur au bassin : dos = bassin/4 − 1 sur la ligne de bassin (ét. 5), devant = bassin/4 + 1 (ét. 11)", () => {
+    expect(dos.points["bassin-cote"].x).toBeCloseTo(92 / 4 - 1, 6); // 22
+    expect(dos.points["bassin-milieu"].x).toBeCloseTo(0, 6);
+    expect(dos.points["bassin-milieu"].y).toBeCloseTo(yBassin, 6);
+    expect(largeurPlanche - devant.points["bassin-cote"].x).toBeCloseTo(92 / 4 + 1, 6); // 24
+    expect(devant.points["bassin-milieu"].x).toBeCloseTo(largeurPlanche, 6);
+  });
+
+  it("répartition basse normative (p. 57, fig. 4) : U bas = 6 → côté 3, devant 3, demi-dos 2, milieu dos 1", () => {
+    const r = repartirPincesTaille(6);
+    expect(r.cote).toBe(3);
+    expect(r.pinceDevant).toBe(3);
+    expect(r.pinceDemiDos).toBe(2);
+    expect(r.milieuDos).toBe(1);
+    expect(r.pinceSupplementaire).toBe(false);
+    // côté bas émergent du tracé = (bassin − poitrine)/4 + côté haut = 3 :
+    // les deux calculs de la p. 57 aboutissent au même point de taille cintré
+    expect(reportValue(report, "coteBas")).toBeCloseTo(3, 6);
+    expect(dos.points["bassin-cote"].x - reportValue(report, "coteBas")).toBeCloseTo(
+      dos.points["taille-cote-dos"].x,
+      6,
+    );
+  });
+
+  it("pinces prolongées en losange : devant 9 cm, demi-dos 11 cm sous la taille (p. 55)", () => {
+    expect(METHOD.LONGUEUR_PINCE_DEVANT_SOUS_TAILLE).toBe(9);
+    expect(METHOD.LONGUEUR_PINCE_DEMI_DOS_SOUS_TAILLE).toBe(11);
+    const pDevant = devant.darts.find((d) => d.id === "pince-taille-devant")!;
+    const pDemiDos = dos.darts.find((d) => d.id === "pince-demi-dos")!;
+    expect(pDevant.apexBas!.x).toBeCloseTo(devant.points["saillant"].x, 6);
+    expect(pDevant.apexBas!.y).toBeCloseTo(yTaille + 9, 6);
+    expect(pDemiDos.apexBas!.x).toBeCloseTo(pDemiDos.apex.x, 6);
+    expect(pDemiDos.apexBas!.y).toBeCloseTo(yTaille + 11, 6);
+  });
+
+  it("platitude des pinces à parts égales de part et d'autre de la taille (p. 59) — tracé en losange fermé", () => {
+    const pince = dos.darts.find((d) => d.id === "pince-demi-dos")!;
+    const demi = pince.platitude! / 2;
+    const poly = dartOutline(pince);
+    for (const leg of pince.legs) {
+      expect(poly.some((p) => Math.abs(p.x - leg.x) < 1e-9 && Math.abs(p.y - (leg.y - demi)) < 1e-9)).toBe(true);
+      expect(poly.some((p) => Math.abs(p.x - leg.x) < 1e-9 && Math.abs(p.y - (leg.y + demi)) < 1e-9)).toBe(true);
+    }
+    expect(poly[0]).toEqual(poly[poly.length - 1]); // losange fermé
+  });
+
+  it("couture de côté basse : verticale à la taille, jonction SOUS les petites hanches, tangente à la ligne (p. 61-62)", () => {
+    for (const piece of [dos, devant]) {
+      const c = piece.curves["cote-bas"];
+      expect(Math.abs(startTangent(c).x), `${piece.id} presque droite à la taille`).toBeLessThan(1e-9);
+      expect(Math.abs(endTangent(c).x), `${piece.id} arrivée tangente à la ligne de côté basse`).toBeLessThan(1e-9);
+      const j = piece.points["jonction-cote-bas"];
+      expect(j.y, `${piece.id} jonction sous les petites hanches`).toBeGreaterThan(yPetitesHanches);
+      expect(j.x).toBeCloseTo(piece.points["bassin-cote"].x, 6);
+    }
+    // jonction à mi-distance petites hanches ↔ bassin [transcription]
+    expect(dos.points["jonction-cote-bas"].y).toBeCloseTo(yTaille + 0.75 * METHOD.HAUTEUR_BASSIN_STANDARD, 6);
+    // platitude de côté à cheval sur la taille (valeur 2 → platitude 3, p. 59)
+    const demi = METHOD.PLATITUDE_PINCE(2) / 2;
+    expect(dos.points["cote-platitude-haut"].y).toBeCloseTo(yTaille - demi, 6);
+    expect(dos.points["cote-platitude-bas"].y).toBeCloseTo(yTaille + demi, 6);
+    expect(dos.points["cote-platitude-haut"].x).toBeCloseTo(dos.points["taille-cote-dos"].x, 6);
+  });
+
+  it("cintrage milieu dos : rejoint x = 0 au niveau des petites hanches (p. 55)", () => {
+    expect(dos.points["milieu-dos-petites-hanches"].x).toBeCloseTo(0, 6);
+    expect(dos.points["milieu-dos-petites-hanches"].y).toBeCloseTo(yPetitesHanches, 6);
+  });
+
+  it("la ligne de taille n'est plus un bord de contour : c'est une référence (rouge)", () => {
+    for (const piece of [dos, devant]) {
+      for (const s of piece.outline) {
+        if (s.kind === "line") {
+          const horizontaleTaille =
+            Math.abs(s.a.y - yTaille) < 1e-9 && Math.abs(s.b.y - yTaille) < 1e-9 && Math.abs(s.a.x - s.b.x) > 1e-9;
+          expect(horizontaleTaille, `${piece.id} : segment de contour sur la ligne de taille`).toBe(false);
+        }
+      }
+      const ref = piece.refLines.some(
+        (r) => r.kind === "line" && Math.abs(r.a.y - yTaille) < 1e-9 && Math.abs(r.b.y - yTaille) < 1e-9,
+      );
+      expect(ref, `${piece.id} : ligne de taille en référence`).toBe(true);
+    }
+  });
+
+  it("contours fermés jusqu'au bassin, aisance ajoutée au tour de bassin comme aux autres tours", () => {
+    expect(isClosed(dos.outline, 1e-6)).toBe(true);
+    expect(isClosed(devant.outline, 1e-6)).toBe(true);
+    const avec = draftBuste({ ...demo, aisance: 2 });
+    expect(avec.dos.points["bassin-cote"].x).toBeCloseTo((92 + 2) / 4 - 1, 6);
+    expect((88 + 2) / 2 - avec.devant.points["bassin-cote"].x).toBeCloseTo((92 + 2) / 4 + 1, 6);
+    // U bas reste sur les mesures du corps
+    expect(reportValue(avec.report, "aAbsorberBas")).toBe(6);
+    expect(reportValue(avec.report, "coteBas")).toBeCloseTo(3, 6);
+  });
+});
+
+describe("golden : pointe de la pince devant au saillant (C15 re-tranché, p. 75 ; planches p. 55, 68)", () => {
+  it("bretelle et pince de taille se rejoignent à la croix : ligne continue sur le tracé", () => {
     const { devant } = draftBuste(demo);
-    const pince = devant.darts.find((d) => d.id === "pince-taille-devant")!;
-    expect(pince.apex.x).toBeCloseTo(devant.points["saillant"].x, 6);
-    expect(pince.apex.y - devant.points["saillant"].y).toBeCloseTo(METHOD.PLATITUDE_POITRINE, 6);
+    const taille = devant.darts.find((d) => d.id === "pince-taille-devant")!;
+    const bretelle = devant.darts.find((d) => d.id === "pince-bretelle")!;
+    expect(taille.apex.x).toBeCloseTo(devant.points["saillant"].x, 6);
+    expect(taille.apex.y).toBeCloseTo(devant.points["saillant"].y, 6);
+    expect(bretelle.apex).toEqual(devant.points["saillant"]);
+  });
+
+  it("la platitude de poitrine de 2 cm reste une constante de MONTAGE, non dessinée", () => {
+    expect(METHOD.PLATITUDE_POITRINE).toBe(2);
   });
 });
 
