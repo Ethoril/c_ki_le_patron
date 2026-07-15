@@ -12,7 +12,7 @@ exports[`export SVG 1:1 > snapshot du tracé du profil démo 1`] = `
 <line x1="52" y1="-3" x2="52" y2="61" stroke="#dc2626" stroke-width="0.05"/>
 <line x1="28.5" y1="41" x2="52" y2="41" stroke="#dc2626" stroke-width="0.05"/>
 <path d="M 28.5 20.5 L 30.5 39.5 L 30.5 42.5 C 30.5 47 27.5 51.5 27.5 56 L 27.5 61 L 52 61 L 52 6.333 C 51.593 6.333 51.158 6.333 49.556 6.333 C 47.953 6.333 44.667 1.867 44.667 0.111 C 44.667 -1.645 44.894 -2.534 44.667 -3 L 39.274 -0.37 L 34.073 1.083 L 29.417 4.868 C 30.431 6.334 34.781 11.356 35.5 13.667 C 36.219 15.977 34.365 18.1 33.732 18.732 C 33.1 19.365 31.261 20.5 28.5 20.5 Z" fill="none" stroke="black" stroke-width="0.08"/>
-<path d="M 43 25 L 41.5 40 L 41.5 41 L 41.5 42 L 43 50 L 44.5 42 L 44.5 41 L 44.5 40 L 43 25" fill="none" stroke="black" stroke-width="0.05"/>
+<path d="M 43 23 L 41.5 40 L 41.5 41 L 41.5 42 L 43 50 L 44.5 42 L 44.5 41 L 44.5 40 L 43 23" fill="none" stroke="black" stroke-width="0.05"/>
 <path d="M 39.27390238887166 -0.36977311926553647 L 43 23 L 34.07308665910454 1.0833324326496871" fill="none" stroke="black" stroke-width="0.05"/>
 <circle cx="43" cy="23" r="0.15" fill="black"/>
 <line x1="48" y1="27" x2="48" y2="38" stroke="black" stroke-width="0.05"/>

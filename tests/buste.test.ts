@@ -330,13 +330,18 @@ describe("golden : bas du buste jusqu'au bassin (92/68, p. 55-62 ; ét. 5 p. 33,
   });
 });
 
-describe("golden : pointe de la pince devant — platitude de poitrine (C15, p. 75)", () => {
-  it("sommet à 2 cm sous le saillant (valeur du livre, décision 2026-07-15) — jamais sur le saillant", () => {
-    expect(METHOD.PLATITUDE_POITRINE).toBe(2);
+describe("golden : pointe de la pince devant au saillant (C15 re-tranché, p. 75 ; planches p. 55, 68)", () => {
+  it("bretelle et pince de taille se rejoignent à la croix : ligne continue sur le tracé", () => {
     const { devant } = draftBuste(demo);
-    const pince = devant.darts.find((d) => d.id === "pince-taille-devant")!;
-    expect(pince.apex.x).toBeCloseTo(devant.points["saillant"].x, 6);
-    expect(pince.apex.y - devant.points["saillant"].y).toBeCloseTo(METHOD.PLATITUDE_POITRINE, 6);
+    const taille = devant.darts.find((d) => d.id === "pince-taille-devant")!;
+    const bretelle = devant.darts.find((d) => d.id === "pince-bretelle")!;
+    expect(taille.apex.x).toBeCloseTo(devant.points["saillant"].x, 6);
+    expect(taille.apex.y).toBeCloseTo(devant.points["saillant"].y, 6);
+    expect(bretelle.apex).toEqual(devant.points["saillant"]);
+  });
+
+  it("la platitude de poitrine de 2 cm reste une constante de MONTAGE, non dessinée", () => {
+    expect(METHOD.PLATITUDE_POITRINE).toBe(2);
   });
 });
 

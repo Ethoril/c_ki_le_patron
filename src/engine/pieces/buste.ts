@@ -478,8 +478,10 @@ export function draftBuste(m: Measurements): BusteResult {
   );
   devant.point("taille-milieu-devant", pt(largeurPlanche, yTaille));
   if (rep.pinceDevant > 0) {
-    // pointe arrêtée à la platitude de poitrine sous le saillant (C15, p. 75)
-    const apex = pt(saillant.x, saillant.y + METHOD.PLATITUDE_POITRINE);
+    // sommet À la croix du saillant : bretelle et pince de taille forment une
+    // ligne continue sur le tracé (C15 re-tranché 2026-07-15, p. 75 ; la
+    // platitude de poitrine ≈ 2 cm est une consigne de montage, non dessinée)
+    const apex = pt(saillant.x, saillant.y);
     // sommet bas à 9 cm sous la taille (p. 55), pince en losange
     const apexBas = pt(saillant.x, yTaille + METHOD.LONGUEUR_PINCE_DEVANT_SOUS_TAILLE);
     devant.dart({
