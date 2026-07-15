@@ -1026,3 +1026,16 @@ avant correction) :
     18° pince fermée ; l'option absorbée devient un paramètre.
 16. **Gabarit sans pinces** (p. 86-89) : sous-produit d'export potentiel
     (contour avant pinces) — à noter au cahier, pas au moteur v1.
+17. **Lissage de l'encolure** (constat visuel du 2026-07-15, à traiter) :
+    le col rendu paraît segmenté/anguleux — dos : une seule cubique
+    nuque → épaule ; devant : spline passant par les platitudes 1/3 — là où
+    le livre veut un arrondi doux tracé au perroquet (p. 63-64). À reprendre
+    avec la même démarche que l'emmanchure (allure « coup de perroquet »
+    validée livre en main, §6) : tangentes/poignées recalibrées sur les
+    planches, golden tests d'allure (pas de bec au raccord, courbure
+    continue), snapshot régénéré en le justifiant. Étape dédiée, hors
+    périmètre du bas au bassin.
+18. **Jonction de la couture de côté basse** : le choix [transcription]
+    « mi-distance petites hanches ↔ bassin » (§11) n'a pas encore pu être
+    jugé sur pièce — à confirmer ou ajuster à l'essayage
+    (`JONCTION_COTE_BAS_FRACTION`).
