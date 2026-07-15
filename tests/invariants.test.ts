@@ -113,14 +113,17 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("sommets de pinces : demi-dos jamais au-dessus de la ligne d'emmanchure (C20) ; devant à la platitude de poitrine sous le saillant (C15)", () => {
+  it("sommets de pinces : demi-dos jamais au-dessus de la ligne d'emmanchure (C20) ; devant à la croix du saillant (C15)", () => {
     for (const m of bodies) {
       const { dos, devant } = draftBuste(m);
       const demiDos = dos.darts.find((d) => d.id === "pince-demi-dos");
       if (demiDos) expect(demiDos.apex.y).toBeGreaterThanOrEqual(m.longueurDos / 2 - 1e-9);
       const pinceDevant = devant.darts.find((d) => d.id === "pince-taille-devant");
       if (pinceDevant) {
-        expect(pinceDevant.apex.y - devant.points["saillant"].y).toBeCloseTo(METHOD.PLATITUDE_POITRINE, 6);
+        // ligne continue avec la bretelle sur le tracé (p. 75) ; la platitude
+        // de poitrine de 2 cm est une consigne de montage, non dessinée
+        expect(pinceDevant.apex.x).toBeCloseTo(devant.points["saillant"].x, 6);
+        expect(pinceDevant.apex.y).toBeCloseTo(devant.points["saillant"].y, 6);
       }
     }
   });

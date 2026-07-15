@@ -98,12 +98,12 @@ export const METHOD = {
   PINCE_EPAULE_DOS_LONGUEUR: 7,
 
   /**
-   * Platitude de poitrine : ≈ 2 cm entre le saillant et l'extrémité de
-   * chaque pince qui y converge (bretelle, taille), pour éviter le bec de
-   * poitrine ; à ajuster à l'essayage selon le volume (p. 75). Sert de
-   * retrait de pointe à la pince de taille devant (C15 — décision du
-   * 2026-07-15 : valeur du livre, remplace les 4 cm d'origine tierce).
-   * [À VALIDER à l'essayage]
+   * Platitude de poitrine — consigne de MONTAGE, non dessinée (C15
+   * re-tranché le 2026-07-15) : sur le tracé, bretelle et pince de taille
+   * forment une ligne continue interrompue par la croix du saillant
+   * (planches p. 55 et 68) ; à l'épinglage de la toile, on s'arrête à
+   * ≈ 2 cm de l'extrémité de chaque pince pour éviter le bec de poitrine,
+   * valeur ajustée à l'essayage selon le volume (p. 75).
    */
   PLATITUDE_POITRINE: 2,
   /**

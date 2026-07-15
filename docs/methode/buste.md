@@ -36,7 +36,7 @@
 | C12 | Pince d'épaule dos | option absorbée par défaut | p. 48 « À noter » : la construction du patron de base doit **impérativement** comporter cette pince pour que le tracé d'emmanchure soit correct. L'absorption dans l'épaule (p. 47, fig. 4) reste une option montrée par le livre (pas de découpe emmanchure/milieu dos), l'écart y est chiffré **1 cm, dos plus long que devant**, résorbé au montage (bords en faux biais) — résout l'[À VALIDER] v2 sur le sens de l'écart. Cible v3+ : tracer la vraie pince (voir §9) |
 | C13 | Construction de la pince d'épaule dos | non chiffrée | axe **au milieu de la largeur d'épaule**, perpendiculaire à la ligne d'épaule inclinée, **longueur 7 cm** ; largeur standard **1 cm** (dos arrondi : jusqu'à 2 cm de large et 5 cm de long) ; après fermeture : **rallonger l'extrémité d'épaule de la valeur de la pince** puis retracer l'emmanchure jusqu'à la carrure, et retracer l'épaule à la règle **à 18°** pince fermée (p. 46-48). NB : le livre écrit « 1 cm de part et d'autre de l'axe » puis parle d'une « valeur de 1 cm » — lecture retenue : **largeur totale 1 cm** (cohérent avec « environ 1 à 2 cm » p. 46 et « augmentée à 2 cm » p. 48) **[AMBIGUÏTÉ notée]** |
 | C14 | Direction du report de la valeur bretelle | non précisée | depuis le milieu d'épaule **vers l'emmanchure** (fig. 5-6 p. 52 : 1er bras au milieu, 2e bras côté emmanchure) ; fermeture pliée sur le 1er bras, valeur couchée **vers le milieu devant** |
-| C15 | Retrait de pointe des pinces au saillant | pince de taille arrêtée 4 cm sous le saillant (source tierce) | livre : **platitude de poitrine ≈ 2 cm à l'extrémité de CHAQUE pince** (bretelle et taille) pour éviter le bec au saillant, valeur exacte fonction du volume de poitrine, ajustée à l'essayage (p. 75) ; les planches p. 55 montrent le haut de pince juste sous la croix. **Tranché le 2026-07-15 : 2 cm, valeur du livre** (`PLATITUDE_POITRINE` dans `method.ts`), à confirmer à l'essayage |
+| C15 | Retrait de pointe des pinces au saillant | pince de taille arrêtée 4 cm sous le saillant (source tierce) | livre : sur le TRACÉ, bretelle et pince de taille forment **une ligne continue interrompue par la croix du saillant** (p. 75 ; planches p. 55 « juste sous la croix » et p. 68 : les pointes se rejoignent). La **platitude de poitrine ≈ 2 cm à l'extrémité de CHAQUE pince** est une consigne de **MONTAGE** (épinglage arrêté avant la pointe, valeur fonction du volume de poitrine, ajustée à l'essayage, p. 75) — elle ne se dessine pas. **Re-tranché le 2026-07-15** (contrôle sur la planche du patron fini) : sommet de la pince de taille AU saillant ; `PLATITUDE_POITRINE = 2` reste en constante de montage, plus de retrait dessiné |
 | C16 | Platitudes de l'encolure devant | « suit la verticale sur 2-3 cm » | quantifié p. 64 : **≈ 1/3 de la largeur** d'encolure (platitude horizontale à la gorge) et **≈ 1/3 de la profondeur** (platitude verticale sous l'épaule). Le « 2-3 cm » de p. 63 en est le cas particulier (cou 38 : 9,5/3 ≈ 3,2 ; 7,5/3 = 2,5) |
 | C17 | Longueurs d'emmanchure | mesurées, exposées, sans contrôle | contrôle du livre : **différence normale de 1 à 2 cm** entre dos et devant (le plus long des deux dépend de la morphologie). Hors plage → erreur d'inclinaison d'épaule ou de répartition du tour de poitrine dos/devant ; manche difficile voire impossible à monter (p. 65) |
 | C18 | Élargissement de base / marges | résumés | procédure chiffrée p. 66-68 : épaule +1 cm (parallèle), ligne d'emmanchure **abaissée de 2 cm**, côtés +1 cm dos ET devant, courbe d'emmanchure **décalquée puis décalée** depuis la carrure ; marges 1 cm (côté de la toile : 2-3 cm) ; dos d'essayage **toujours coupé au pli** ; croisure à 2-3 cm du milieu devant. Voir §15-17 |
@@ -102,7 +102,7 @@
 | Longueur sous la taille | devant ≤ 9 cm ; demi-dos ≤ 11 cm ; côté finit aux petites hanches | — | p. 55 |
 | Hauteur de bassin (mesure absente) | standard 20 cm ; petites hanches à mi-distance (10 cm) | FDA : 17-23 cm quelle que soit la stature | generalites §6, p. 24 |
 | Platitude de pince à la taille | 2 à 4 cm, à parts égales de part et d'autre de la taille, inversement proportionnelle à la valeur | valeur 3 → 2 ; valeur 1-1,5 → ≥ 3 | p. 59 |
-| Platitude de poitrine | ≈ 2 cm à l'extrémité de chaque pince au saillant | — | p. 75 |
+| Platitude de poitrine (montage) | ≈ 2 cm à l'extrémité de chaque pince au saillant, à l'épinglage — les pinces se rejoignent sur le tracé | — | p. 75 |
 | Différence de longueur d'emmanchure dos/devant | 1 à 2 cm (sens selon morphologie) | — | p. 65 |
 | Élargissement de base | épaule +1 ; emmanchure −2 (abaissée) ; côtés +1 | — | p. 66 |
 | Marges de couture | 1 cm ; côté de la toile 2-3 cm | — | p. 67 |
@@ -842,11 +842,12 @@ D7. **Emmanchure devant** (§6). Spline extrémité d'épaule (pivotée) → car
    (poitrine/4 + 1 local, y emmanchure). Virage plus ample que le dos par
    construction.
 D8. **Pinces de taille devant** (§10-11). Pince du devant : axe vertical par
-   le saillant, valeur équilibrée des deux côtés, ≤ 3 cm ; haut : sommet à
-   2 cm sous le saillant — platitude de poitrine du livre (C15, tranché
-   2026-07-15) ; bas : sommet à 9 cm sous la taille (plafond p. 55), pince
-   en losange, platitude à parts égales autour de la taille (p. 59). Pince
-   de côté : tracée en premier, dos en miroir, ≤ 4, partie haute à la règle.
+   le saillant, valeur équilibrée des deux côtés, ≤ 3 cm ; haut : sommet À
+   la croix du saillant — ligne continue avec la bretelle (C15, re-tranché
+   2026-07-15 ; la platitude de poitrine ≈ 2 cm est une consigne de montage,
+   §18) ; bas : sommet à 9 cm sous la taille (plafond p. 55), pince en
+   losange, platitude à parts égales autour de la taille (p. 59). Pince de
+   côté : tracée en premier, dos en miroir, ≤ 4, partie haute à la règle.
 D9. **Côté devant et bas** : droite de `dessous-bras` à la platitude du point
    de taille cintré, platitude verticale à cheval sur la taille, cubique
    aplatie rejoignant la ligne de côté basse à mi-distance petites hanches ↔
@@ -976,8 +977,11 @@ avant correction) :
    les 3 points (C11, p. 53). Confirmer que le moteur reproduit bien les
    largeurs d'origine sur les lignes de carrure ET d'emmanchure.
 4. **Retrait de pointe de la pince de taille devant** : ~~décision à
-   prendre~~ tranché le 2026-07-15 — 2 cm du livre (C15, p. 75),
-   `PLATITUDE_POITRINE` en place dans `method.ts`, couvert par golden test.
+   prendre~~ re-tranché le 2026-07-15 (contrôle sur la planche du patron
+   fini) — AUCUN retrait dessiné : le sommet rejoint la croix du saillant,
+   ligne continue avec la bretelle (C15, p. 75) ; la platitude de poitrine
+   de 2 cm est une consigne de montage (`PLATITUDE_POITRINE` documentée
+   dans `method.ts`), couvert par golden test.
 5. **Plafonds et répartition des pinces de taille** : devant ≤ 3, côtés ≤ 4,
    demi-dos ≤ 2, milieu dos ≤ 1-2 ; exemple normatif 1+2+2 / 2+3 (p. 55-57).
    Vérifier constantes et algorithme (déjà couverts par golden test).
