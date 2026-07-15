@@ -5,3 +5,7 @@ dist/
 tsconfig.tsbuildinfo
 .vite/
 docs/*.pdf
+# Source du livre (méthode) : ne jamais committer de reproduction du livre
+*.pdf
+# Sortie du contrôle visuel (npx vite-node scripts/demo-svg.ts sortie.svg)
+sortie.svg
