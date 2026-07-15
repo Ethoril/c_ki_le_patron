@@ -28,10 +28,10 @@ describe("tuilage A4 (math pure)", () => {
     expect(t.origin).toEqual({ x: -1, y: -1 });
   });
 
-  it("la planche du profil démo (≈ 46 × 46 cm) tient sur 3 colonnes × 2 lignes", () => {
-    const t = computeTiling({ x: 0, y: -3 }, { x: 44, y: 41 });
+  it("la planche du profil démo (≈ 54 × 66 cm, buste au bassin) tient sur 3 colonnes × 3 lignes", () => {
+    const t = computeTiling({ x: 0, y: -3 }, { x: 52, y: 61 });
     expect(t.cols).toBe(3);
-    expect(t.rows).toBe(2);
+    expect(t.rows).toBe(3);
   });
 
   it("les tuiles couvrent toute la planche", () => {
@@ -60,7 +60,9 @@ describe("génération du document (profil démo)", () => {
   const doc = buildExportPdf(pattern.pieces, DEMO_MEASUREMENTS, new Date(2026, 6, 6));
 
   it("1 page de garde + une page par tuile", () => {
-    expect(doc.getNumberOfPages()).toBe(1 + 3 * 2);
+    // buste prolongé au bassin (2026-07-15) : la planche démo passe de
+    // ≈ 46 × 46 (3 × 2 tuiles) à ≈ 54 × 66 cm → 3 × 3 tuiles
+    expect(doc.getNumberOfPages()).toBe(1 + 3 * 3);
   });
 
   it("pages au format A4 en cm", () => {

@@ -11,20 +11,21 @@ import type { Segment } from "./geometry/path";
 import type { DraftStep, Dart, Mark, Label, PatternPiece } from "./types";
 
 /**
- * Polyligne de tracé d'une pince, du bas d'une jambe au bas de l'autre.
- * Avec platitude (pinces de taille, p. 59-60) : les bords remontent
- * verticalement (zone plate autour de la taille) avant de rejoindre le sommet.
+ * Polyligne de tracé d'une pince. Pince simple : V d'une jambe à l'autre par
+ * le sommet. Avec platitude (pinces de taille, p. 59-60) : zone plate
+ * verticale autour de la ligne des jambes, à parts égales de part et d'autre
+ * quand la pince est en losange (`apexBas`, p. 55, 59) — le contour est alors
+ * fermé (premier point = dernier point).
  */
 export function dartOutline(d: Dart): Pt[] {
-  if (!d.platitude) return [d.legs[0], d.apex, d.legs[1]];
-  const demi = d.platitude / 2;
-  return [
-    d.legs[0],
-    { x: d.legs[0].x, y: d.legs[0].y - demi },
-    d.apex,
-    { x: d.legs[1].x, y: d.legs[1].y - demi },
-    d.legs[1],
-  ];
+  const demi = (d.platitude ?? 0) / 2;
+  const haut = d.legs.map((l) => ({ x: l.x, y: l.y - demi }));
+  if (!d.apexBas) {
+    if (!d.platitude) return [d.legs[0], d.apex, d.legs[1]];
+    return [d.legs[0], haut[0], d.apex, haut[1], d.legs[1]];
+  }
+  const bas = d.legs.map((l) => ({ x: l.x, y: l.y + demi }));
+  return [d.apex, haut[0], d.legs[0], bas[0], d.apexBas, bas[1], d.legs[1], haut[1], d.apex];
 }
 
 export class Draft {
