@@ -81,18 +81,18 @@ export const METHOD = {
   /**
    * Pince d'épaule dos, option « valeur absorbée » (p. 47, fig. 4) : pas de
    * pince tracée, l'épaule dos garde 1 cm d'excédent sur l'épaule devant —
-   * dos plus long, sens confirmé par la relecture v3 (C12) —, résorbé en
-   * embu au montage (bords en faux biais). Cible v3+ : tracer la vraie pince
-   * (PINCE_EPAULE_DOS_*, buste.md C12-C13, §8). [transcription : dos =
-   * épaule mesurée, devant = épaule − 1]
+   * dos plus long, sens confirmé par la relecture v3 (C12) –, résorbé en
+   * embu au montage (bords en faux biais). Depuis M3.1, cette valeur est
+   * conservée uniquement pour la variante absorbée documentée ; le patron de
+   * base principal trace PINCE_EPAULE_DOS_*.
    */
   EMBU_EPAULE_DOS: 1,
   /**
    * Pince d'épaule dos, construction du livre (p. 46-48) : axe au milieu de
    * la largeur d'épaule, perpendiculaire à la ligne d'épaule inclinée,
    * largeur ≈ 1 cm (jusqu'à 2 si dos arrondi, alors longueur 5), longueur
-   * 7 cm. NON TRACÉE en v1/v2 (option absorbée ci-dessus) — constantes
-   * documentées pour la cible v3+ (buste.md C12-C13).
+   * 7 cm. Tracée dans la construction principale depuis M3.1 ; l'option
+   * absorbée ci-dessus reste une future variante (buste.md C12-C13).
    */
   PINCE_EPAULE_DOS_LARGEUR: 1,
   PINCE_EPAULE_DOS_LONGUEUR: 7,
