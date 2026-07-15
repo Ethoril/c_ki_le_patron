@@ -11,13 +11,24 @@
  */
 
 import type { Pt } from "../geometry/point";
-import { pt, polar, dist, rotateAround, scale, sub } from "../geometry/point";
+import { pt, polar, dist, rotateAround, scale, sub, angleDeg } from "../geometry/point";
 import type { Curve } from "../geometry/curve";
-import { splineThrough, hermite, concatCurves, curveLength } from "../geometry/curve";
+import { splineThrough, hermite, concatCurves, curveLength, startTangent } from "../geometry/curve";
 import { Draft } from "../drafting";
 import { METHOD, anglesEpaule, repartirPincesTaille } from "../method";
 import type { Measurements } from "../measurements";
 import type { PatternPiece, DraftReport, DraftWarning, ReportValue } from "../types";
+import {
+  applyTransform,
+  applyVector,
+  invertTransform,
+  rotationAroundTransform,
+} from "../geometry/transform";
+import {
+  alignSegmentTransform,
+  assembledDirectionToOpen,
+  checkBusteAssemblage,
+} from "../assembly";
 
 export type BusteResult = { dos: PatternPiece; devant: PatternPiece; report: DraftReport };
 
@@ -95,10 +106,11 @@ function courbeEmmanchure(
   sens: 1 | -1,
   tension: number,
   valeurBissectrice: number,
+  tangenteEpaule?: Pt,
 ): Curve {
   const a = (METHOD.TANGENTE_BISSECTRICE_DEG * Math.PI) / 180;
   const d45 = pt(sens * Math.cos(a), Math.sin(a));
-  const haut = splineThrough([epaule, carrure, bissectrice], tension, [undefined, undefined, d45]);
+  const haut = splineThrough([epaule, carrure, bissectrice], tension, [tangenteEpaule, undefined, d45]);
   const corde = dist(bissectrice, dessousBras);
   // poignée du raccord : celle de la spline, bornée par la valeur de
   // bissectrice (jamais sous la ligne) et par corde/3 (pas d'inflexion)
@@ -110,6 +122,36 @@ function courbeEmmanchure(
   const m2 = METHOD.POIGNEE_ARRIVEE_EMMANCHURE * corde;
   const virage = hermite(bissectrice, scale(d45, 3 * m1), dessousBras, pt(sens * 3 * m2, 0));
   return concatCurves(haut, virage);
+}
+
+/** Plus petit angle signé qui fait tourner le rayon pivot→from vers pivot→to. */
+function closingAngleDeg(pivot: Pt, from: Pt, to: Pt): number {
+  let delta = angleDeg(pivot, to) - angleDeg(pivot, from);
+  while (delta <= -180) delta += 360;
+  while (delta > 180) delta -= 360;
+  return delta;
+}
+
+/** Intersections d'un segment avec l'horizontale `y`. */
+function segmentXsAtY(a: Pt, b: Pt, y: number): number[] {
+  const dy = b.y - a.y;
+  if (Math.abs(dy) < 1e-9) return Math.abs(y - a.y) < 1e-9 ? [a.x, b.x] : [];
+  const t = (y - a.y) / dy;
+  return t < -1e-9 || t > 1 + 1e-9 ? [] : [a.x + t * (b.x - a.x)];
+}
+
+/**
+ * C11, p. 53 : largeur horizontale avalée par le triangle de bretelle à une
+ * hauteur donnée. Les deux bras sont droits jusqu'au saillant ; cette mesure
+ * fournit aussi l'interpolation exacte entre carrure et emmanchure.
+ */
+function valeurIntercepteeParPince(jambe1: Pt, jambe2: Pt, saillant: Pt, y: number): number {
+  const intersections = [
+    ...segmentXsAtY(jambe1, jambe2, y),
+    ...segmentXsAtY(jambe2, saillant, y),
+    ...segmentXsAtY(saillant, jambe1, y),
+  ];
+  return intersections.length < 2 ? 0 : Math.max(...intersections) - Math.min(...intersections);
 }
 
 export function draftBuste(m: Measurements): BusteResult {
@@ -206,13 +248,86 @@ export function draftBuste(m: Measurements): BusteResult {
   const nuque = dos.point("nuque", pt(0, profEncolureDos), "Nuque : profondeur d'encolure sous la ligne d'épaule", "p. 40");
   const snpDos = dos.point("snp-dos", pt(largeurEncolure, 0), "Point d'encolure côté cou, SUR la ligne d'épaule", "p. 39");
 
-  // 3 — Épaule dos à 18° — ou à l'angle déduit de la pente d'épaule mesurée
-  // (p. 41 ; buste.md §Extensions) ; pince absorbée (ét. 4, p. 47) : longueur = épaule mesurée
+  // 3-4 — Épaule dos et vraie pince d'épaule (p. 41, 46-48 ; C12-C13).
+  // Les deux jambes sont d'abord posées sur l'épaule inclinée, autour de son
+  // milieu. Le bloc côté emmanchure est fermé par rotation de la jambe 2 sur
+  // la jambe 1 ; l'épaule fermée est alors rectifiée à l'angle effectif et à
+  // la longueur mesurée, puis la pointe d'épaule est rouverte par l'inverse.
+  const milieuEpauleDos = polar(snpDos, angles.dos, m.longueurEpaule / 2);
+  const jambeEpauleDos1 = dos.point(
+    "pince-epaule-dos-1",
+    polar(snpDos, angles.dos, m.longueurEpaule / 2 - METHOD.PINCE_EPAULE_DOS_LARGEUR / 2),
+    "Première jambe de la pince d'épaule dos",
+    "p. 46-48",
+    {
+      dependsOn: ["measurement.longueurEpaule", "method.PINCE_EPAULE_DOS_LARGEUR", "snp-dos"],
+      inputs: { largeur: METHOD.PINCE_EPAULE_DOS_LARGEUR, angle: angles.dos },
+    },
+  );
+  const jambeEpauleDos2 = dos.point(
+    "pince-epaule-dos-2",
+    polar(snpDos, angles.dos, m.longueurEpaule / 2 + METHOD.PINCE_EPAULE_DOS_LARGEUR / 2),
+    "Seconde jambe de la pince d'épaule dos",
+    "p. 46-48",
+    {
+      dependsOn: ["measurement.longueurEpaule", "method.PINCE_EPAULE_DOS_LARGEUR", "snp-dos"],
+      inputs: { largeur: METHOD.PINCE_EPAULE_DOS_LARGEUR, angle: angles.dos },
+    },
+  );
+  const pointePinceEpauleDos = dos.point(
+    "pince-epaule-dos-pointe",
+    polar(milieuEpauleDos, angles.dos + 90, METHOD.PINCE_EPAULE_DOS_LONGUEUR),
+    "Pointe de la pince d'épaule dos, axe perpendiculaire",
+    "p. 46-48",
+    {
+      dependsOn: ["measurement.longueurEpaule", "method.PINCE_EPAULE_DOS_LONGUEUR", "snp-dos"],
+      inputs: { longueur: METHOD.PINCE_EPAULE_DOS_LONGUEUR, angle: angles.dos + 90 },
+    },
+  );
+  const fermeturePinceEpauleDos = rotationAroundTransform(
+    pointePinceEpauleDos,
+    closingAngleDeg(pointePinceEpauleDos, jambeEpauleDos2, jambeEpauleDos1),
+  );
+  const epauleDosFermee = dos.point(
+    "epaule-dos-fermee",
+    polar(snpDos, angles.dos, m.longueurEpaule),
+    `Extrémité d'épaule dos rectifiée pince fermée (${angles.dos.toFixed(0)}°)`,
+    "p. 48",
+    {
+      dependsOn: ["measurement.longueurEpaule", "pince-epaule-dos-1", "pince-epaule-dos-2"],
+      inputs: { longueur: m.longueurEpaule, angle: angles.dos },
+    },
+  );
   const epauleDos = dos.point(
     "epaule-dos",
-    polar(snpDos, angles.dos, m.longueurEpaule),
-    `Extrémité d'épaule dos (${angles.dos.toFixed(0)}°)`,
-    "p. 41",
+    applyTransform(epauleDosFermee, invertTransform(fermeturePinceEpauleDos)),
+    "Extrémité d'épaule dos rouverte après rectification",
+    "p. 48",
+    {
+      dependsOn: ["epaule-dos-fermee", "pince-epaule-dos-pointe"],
+      inputs: { etat: "ouvert" },
+    },
+  );
+  dos.dart(
+    {
+      id: "pince-epaule-dos",
+      legs: [jambeEpauleDos1, jambeEpauleDos2],
+      apex: pointePinceEpauleDos,
+      pivot: pointePinceEpauleDos,
+      axis: [milieuEpauleDos, pointePinceEpauleDos],
+      value: METHOD.PINCE_EPAULE_DOS_LARGEUR,
+      closeTransform: fermeturePinceEpauleDos,
+      foldToward: "center",
+      label: `Pince épaule dos ${METHOD.PINCE_EPAULE_DOS_LARGEUR.toFixed(1)} cm`,
+    },
+    "p. 46-48",
+    {
+      dependsOn: ["pince-epaule-dos-1", "pince-epaule-dos-2", "pince-epaule-dos-pointe"],
+      inputs: {
+        valeur: METHOD.PINCE_EPAULE_DOS_LARGEUR,
+        longueur: METHOD.PINCE_EPAULE_DOS_LONGUEUR,
+      },
+    },
   );
 
   // 5 — Points d'emmanchure dos (p. 42) : carrure, bissectrice du coin, platitude
@@ -248,6 +363,7 @@ export function draftBuste(m: Measurements): BusteResult {
       id: "pince-demi-dos",
       legs: [pt(xAxe - rep.pinceDemiDos / 2, yTaille), pt(xAxe + rep.pinceDemiDos / 2, yTaille)],
       apex,
+      pivot: apex,
       apexBas,
       axis: [apexBas, apex],
       value: rep.pinceDemiDos,
@@ -293,7 +409,30 @@ export function draftBuste(m: Measurements): BusteResult {
     "Encolure dos : platitude au milieu, raccord sur l'épaule",
     "p. 39-40, 63",
   );
-  dos.line("epaule-dos", snpDos, epauleDos, `Épaule dos à ${angles.dos.toFixed(0)}°`, "p. 41");
+  dos.line(
+    "epaule-dos-1",
+    snpDos,
+    jambeEpauleDos1,
+    `Épaule dos avant pince (${angles.dos.toFixed(0)}° fermée)`,
+    "p. 41, 48",
+    { dependsOn: ["snp-dos", "pince-epaule-dos-1"] },
+  );
+  dos.line(
+    "bouche-pince-epaule-dos",
+    jambeEpauleDos1,
+    jambeEpauleDos2,
+    "Bouche de la pince d'épaule dos",
+    "p. 46-48",
+    { dependsOn: ["pince-epaule-dos-1", "pince-epaule-dos-2"] },
+  );
+  dos.line(
+    "epaule-dos-2",
+    jambeEpauleDos2,
+    epauleDos,
+    "Épaule dos rouverte depuis la ligne rectifiée",
+    "p. 48",
+    { dependsOn: ["pince-epaule-dos-2", "epaule-dos-fermee", "pince-epaule-dos"] },
+  );
   dos.curve(
     "emmanchure",
     courbeEmmanchure(
@@ -306,7 +445,11 @@ export function draftBuste(m: Measurements): BusteResult {
       METHOD.BISSECTRICE_EMMANCHURE_DOS,
     ),
     "Emmanchure dos : épaule → carrure → bissectrice → platitude → côté",
-    "p. 42-44",
+    "p. 42-44, 48",
+    {
+      dependsOn: ["epaule-dos", "carrure-dos", "bissectrice-dos", "dessous-bras", "pince-epaule-dos"],
+      inputs: { bissectrice: METHOD.BISSECTRICE_EMMANCHURE_DOS },
+    },
   );
   dos.line("cote-dos", dessousBrasDos, platitudeCoteHautDos, "Couture de côté dos, à la règle jusqu'à la platitude", "p. 54, 61");
   if (demiPlatitudeCote > 0) {
@@ -329,15 +472,34 @@ export function draftBuste(m: Measurements): BusteResult {
   dos.lineRef("ref-milieu-dos", pt(0, 0), pt(0, yBassin), "Milieu dos", "p. 33 ét. 1");
   dos.lineRef("ref-taille-dos", pt(0, yTaille), pt(xCote, yTaille), "Ligne de taille", "p. 33 ét. 3");
   dos.label({ at: pt(8, yTaille - 6), text: "DOS", anchor: "middle" });
+  dos.seam("encolure", ["encolure-dos"], "nuque", "snp-dos");
+  dos.seam(
+    "epaule",
+    ["epaule-dos-1", "bouche-pince-epaule-dos", "epaule-dos-2"],
+    "snp-dos",
+    "epaule-dos",
+  );
+  dos.seam("emmanchure", ["emmanchure"], "epaule-dos", "dessous-bras");
+  dos.seam(
+    "cote",
+    ["cote-dos", ...(demiPlatitudeCote > 0 ? ["cote-platitude"] : []), "cote-bas", "cote-ligne-basse"],
+    "dessous-bras",
+    "bassin-cote",
+  );
+  dos.seam("bassin", ["bassin-dos"], "bassin-cote", "bassin-milieu");
+  dos.seam(
+    "milieu",
+    ["milieu-dos-bassin", "milieu-dos-cintrage-bas", "milieu-dos-cintrage-haut", "milieu-dos-haut"],
+    "bassin-milieu",
+    "nuque",
+  );
 
   // ═══════════════════ DEMI-DEVANT (D1-D9)
   const devant = new Draft("buste-devant", "Demi-devant");
 
   // D1 — Cadre (p. 35) : mêmes horizontales, ligne d'épaule propre au devant
   const yEpauleDevant = yTaille - m.longueurDevant;
-  const dessousBras = devant.point("dessous-bras", pt(xCote, yEmmanchure), "Point de côté sur la ligne d'emmanchure");
-  devant.helper("ligne-emmanchure", pt(xCote, yEmmanchure), pt(largeurPlanche, yEmmanchure), "Ligne d'emmanchure", "p. 35");
-  devant.helper("ligne-carrure", pt(xCote, yCarrure), pt(largeurPlanche, yCarrure), "Ligne de carrure", "p. 35");
+  const dessousBrasReference = pt(xCote, yEmmanchure);
   devant.helper(
     "ligne-epaule-devant",
     pt(xCote, yEpauleDevant),
@@ -416,9 +578,10 @@ export function draftBuste(m: Measurements): BusteResult {
   );
 
   // D5 — Épaule devant à 26° (ou angle dos mesuré + différentiel de la
-  // méthode, buste.md §Extensions) + pince bretelle (p. 41, 49-53)
-  // Option pince d'épaule dos absorbée : épaule devant = épaule − 1 (p. 47)
-  const longueurEpauleDevant = m.longueurEpaule - METHOD.EMBU_EPAULE_DOS;
+  // méthode, buste.md §Extensions) + pince bretelle (p. 41, 49-53).
+  // Avec la vraie pince d'épaule dos, les deux épaules fermées reprennent la
+  // longueur mesurée ; l'embu de 1 cm ne concerne plus que la variante absorbée.
+  const longueurEpauleDevant = m.longueurEpaule;
   const dirEpauleDevant = 180 - angles.devant; // vers le côté, en descendant
   const epauleProvisoire = polar(snpDevant, dirEpauleDevant, longueurEpauleDevant);
   const pb1 = devant.point(
@@ -444,29 +607,87 @@ export function draftBuste(m: Measurements): BusteResult {
     "Extrémité d'épaule devant, pince ouverte",
     "p. 52",
   );
+  const fermeturePinceBretelle = rotationAroundTransform(saillant, -theta);
 
-  // D6 — Points d'emmanchure devant (p. 42) : carrure/bissectrice/platitude non pivotées
+  // D6 — Points d'emmanchure devant (p. 42), puis rétablissement des mesures
+  // après pince bretelle (p. 53, C11). Le patron ouvert reçoit, vers
+  // l'extérieur, la largeur du triangle interceptée à la hauteur de chaque
+  // repère. Après absorption de la pince, les largeurs utiles retrouvent les
+  // références du cadre.
+  const carrureDevantReference = pt(largeurPlanche - m.carrureDevant / 2, yCarrure);
+  const coinDevantReference = pt(carrureDevantReference.x, yEmmanchure);
+  const bisDevantReference = pt(
+    coinDevantReference.x - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
+    coinDevantReference.y - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
+  );
+  const retablissementCarrureDevant = valeurIntercepteeParPince(pb1, pb2, saillant, yCarrure);
+  const retablissementBissectriceDevant = valeurIntercepteeParPince(
+    pb1,
+    pb2,
+    saillant,
+    bisDevantReference.y,
+  );
+  const retablissementEmmanchureDevant = valeurIntercepteeParPince(pb1, pb2, saillant, yEmmanchure);
+  const dessousBras = devant.point(
+    "dessous-bras",
+    pt(dessousBrasReference.x - retablissementEmmanchureDevant, yEmmanchure),
+    "Point de côté ouvert après rétablissement de la largeur d'emmanchure",
+    "p. 53 fig. 8-9",
+    {
+      dependsOn: ["pince-bretelle-1", "pince-bretelle-2", "saillant"],
+      inputs: { referenceX: dessousBrasReference.x, report: retablissementEmmanchureDevant },
+    },
+  );
   const carrureDevantPt = devant.point(
     "carrure-devant",
-    pt(largeurPlanche - m.carrureDevant / 2, yCarrure),
-    "Point de carrure devant",
-    "p. 42 ét. 1",
+    pt(carrureDevantReference.x - retablissementCarrureDevant, yCarrure),
+    "Point de carrure devant ouvert après rétablissement",
+    "p. 42 ét. 1, p. 53",
+    {
+      dependsOn: ["measurement.carrureDevant", "pince-bretelle-1", "pince-bretelle-2", "saillant"],
+      inputs: { referenceX: carrureDevantReference.x, report: retablissementCarrureDevant },
+    },
   );
-  const coinDevant = pt(largeurPlanche - m.carrureDevant / 2, yEmmanchure);
   const bisDevant = devant.point(
     "bissectrice-devant",
     pt(
-      coinDevant.x - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
-      coinDevant.y - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
+      bisDevantReference.x - retablissementBissectriceDevant,
+      bisDevantReference.y,
     ),
-    "Point de bissectrice (2,5 cm du coin)",
-    "p. 42 ét. 2",
+    "Guide de bissectrice ouvert : référence 2,5 cm puis rétablissement interpolé",
+    "p. 42 ét. 2, p. 53",
+    {
+      dependsOn: ["carrure-devant", "pince-bretelle-1", "pince-bretelle-2", "saillant"],
+      inputs: {
+        referenceX: bisDevantReference.x,
+        bissectrice: METHOD.BISSECTRICE_EMMANCHURE_DEVANT,
+        report: retablissementBissectriceDevant,
+      },
+    },
   );
   devant.point(
     "platitude-devant",
-    pt(xCote + METHOD.PLATITUDE_EMMANCHURE, yEmmanchure),
-    "Repère de platitude : la queue du virage lèche la ligne à 1 cm du côté",
-    "p. 42 ét. 3",
+    pt(xCote + METHOD.PLATITUDE_EMMANCHURE - retablissementEmmanchureDevant, yEmmanchure),
+    "Repère de platitude ouvert, translaté avec le dessous-bras rétabli",
+    "p. 42 ét. 3, p. 53",
+    {
+      dependsOn: ["dessous-bras"],
+      inputs: { platitude: METHOD.PLATITUDE_EMMANCHURE, report: retablissementEmmanchureDevant },
+    },
+  );
+  devant.helper(
+    "ligne-emmanchure",
+    dessousBras,
+    pt(largeurPlanche, yEmmanchure),
+    "Ligne d'emmanchure après rétablissement",
+    "p. 35, 53",
+  );
+  devant.helper(
+    "ligne-carrure",
+    pt(carrureDevantPt.x, yCarrure),
+    pt(largeurPlanche, yCarrure),
+    "Ligne de carrure après rétablissement",
+    "p. 35, 53",
   );
 
   // D8 — Pinces de taille devant (p. 54-55)
@@ -488,10 +709,12 @@ export function draftBuste(m: Measurements): BusteResult {
       id: "pince-taille-devant",
       legs: [pt(saillant.x - rep.pinceDevant / 2, yTaille), pt(saillant.x + rep.pinceDevant / 2, yTaille)],
       apex,
+      pivot: apex,
       apexBas,
       axis: [apexBas, apex],
       value: rep.pinceDevant,
       platitude: METHOD.PLATITUDE_PINCE(rep.pinceDevant),
+      assemblyInstruction: { stitchStopBeforeTipCm: METHOD.PLATITUDE_POITRINE },
       label: `Pince devant ${rep.pinceDevant.toFixed(1)} cm`,
     });
   }
@@ -538,6 +761,21 @@ export function draftBuste(m: Measurements): BusteResult {
   devant.line("epaule-devant-1", snpDevant, pb1, `Première moitié d'épaule devant (${angles.devant.toFixed(0)}°)`, "p. 41");
   devant.line("bouche-pince-bretelle", pb1, pb2, "Ouverture de la pince bretelle", "p. 52");
   devant.line("epaule-devant-2", pb2, epauleDevant, "Seconde moitié d'épaule, pivotée", "p. 52");
+  // B3 — Dans la vue assemblée, les tangentes d'emmanchure doivent se
+  // prolonger sans bec. Le dos conserve son allure validée ; la direction de
+  // départ du devant est ramenée de l'état fermé/assemblé vers l'état ouvert.
+  const assemblageEpaule = alignSegmentTransform(
+    snpDos,
+    epauleDosFermee,
+    snpDevant,
+    epauleProvisoire,
+  );
+  const tangenteDosFermee = applyVector(startTangent(dos.getCurve("emmanchure")), fermeturePinceEpauleDos);
+  const tangenteDevantOuverte = assembledDirectionToOpen(
+    scale(tangenteDosFermee, -1),
+    fermeturePinceBretelle,
+    assemblageEpaule,
+  );
   devant.curve(
     "emmanchure",
     courbeEmmanchure(
@@ -548,18 +786,43 @@ export function draftBuste(m: Measurements): BusteResult {
       -1,
       METHOD.TENSION.emmanchureDevant,
       METHOD.BISSECTRICE_EMMANCHURE_DEVANT,
+      tangenteDevantOuverte,
     ),
     "Emmanchure devant : épaule → carrure → bissectrice → platitude → côté",
-    "p. 42-44",
+    "p. 42-44, 53, 64-65",
+    {
+      dependsOn: [
+        "epaule-devant",
+        "carrure-devant",
+        "bissectrice-devant",
+        "dessous-bras",
+        "pince-bretelle",
+        "buste-dos:emmanchure",
+      ],
+      inputs: {
+        bissectrice: METHOD.BISSECTRICE_EMMANCHURE_DEVANT,
+        etat: "ouvert-retabli",
+        reportCarrure: retablissementCarrureDevant,
+        reportBissectrice: retablissementBissectriceDevant,
+        reportEmmanchure: retablissementEmmanchureDevant,
+      },
+    },
   );
 
   devant.dart({
     id: "pince-bretelle",
     legs: [pb1, pb2],
     apex: saillant,
+    pivot: saillant,
     axis: [pt((pb1.x + pb2.x) / 2, (pb1.y + pb2.y) / 2), saillant],
     value: valeurBretelle,
+    closeTransform: fermeturePinceBretelle,
+    foldToward: "center",
+    assemblyInstruction: { stitchStopBeforeTipCm: METHOD.PLATITUDE_POITRINE },
     label: `Pince bretelle ${valeurBretelle.toFixed(1)} cm`,
+  }, "p. 49-53", {
+    dependsOn: ["pince-bretelle-1", "pince-bretelle-2", "saillant"],
+    inputs: { valeur: valeurBretelle, arretMontage: METHOD.PLATITUDE_POITRINE },
   });
   devant.mark({ id: "saillant", at: saillant, kind: "point", label: "Saillant" });
   devant.mark({
@@ -578,10 +841,27 @@ export function draftBuste(m: Measurements): BusteResult {
   );
   devant.lineRef("ref-taille-devant", pt(xCote, yTaille), pt(largeurPlanche, yTaille), "Ligne de taille", "p. 33 ét. 3");
   devant.label({ at: pt(largeurPlanche - 8, yTaille - 6), text: "DEVANT", anchor: "middle" });
+  devant.seam(
+    "cote",
+    ["cote-devant", ...(demiPlatitudeCote > 0 ? ["cote-platitude"] : []), "cote-bas", "cote-ligne-basse"],
+    "dessous-bras",
+    "bassin-cote",
+  );
+  devant.seam("bassin", ["bassin-devant"], "bassin-cote", "bassin-milieu");
+  devant.seam("milieu", ["milieu-devant"], "bassin-milieu", "gorge");
+  devant.seam("encolure", ["encolure-devant"], "gorge", "snp-devant");
+  devant.seam(
+    "epaule",
+    ["epaule-devant-1", "bouche-pince-bretelle", "epaule-devant-2"],
+    "snp-devant",
+    "epaule-devant",
+  );
+  devant.seam("emmanchure", ["emmanchure"], "epaule-devant", "dessous-bras");
 
   // ═══════════════════ Rapport de valeurs calculées (exactes ; l'arrondi est d'affichage)
   const dosPiece = dos.toPiece();
   const devantPiece = devant.toPiece();
+  const assemblyChecks = checkBusteAssemblage(dosPiece, devantPiece);
   const emmanchureDos = curveLength(dosPiece.curves["emmanchure"]);
   const emmanchureDevant = curveLength(devantPiece.curves["emmanchure"]);
 
@@ -592,7 +872,7 @@ export function draftBuste(m: Measurements): BusteResult {
   if (diffEmmanchure < METHOD.DIFFERENCE_EMMANCHURE_MIN || diffEmmanchure > METHOD.DIFFERENCE_EMMANCHURE_MAX) {
     warnings.push({
       code: "difference-emmanchure",
-      message: `Écart de longueur d'emmanchure dos/devant de ${diffEmmanchure.toFixed(1)} cm, hors de la plage normale de ${METHOD.DIFFERENCE_EMMANCHURE_MIN} à ${METHOD.DIFFERENCE_EMMANCHURE_MAX} cm (p. 65) : vérifier l'inclinaison d'épaule et la répartition du tour de poitrine — le montage de la manche en pâtira.`,
+      message: `Écart de longueur d'emmanchure dos/devant de ${diffEmmanchure.toFixed(1)} cm, hors de la plage normale de ${METHOD.DIFFERENCE_EMMANCHURE_MIN} à ${METHOD.DIFFERENCE_EMMANCHURE_MAX} cm (p. 65) : vérifier l'inclinaison d'épaule, la répartition du tour de poitrine et le rétablissement après pince — le montage de la manche en pâtira.`,
     });
   }
 
@@ -616,6 +896,9 @@ export function draftBuste(m: Measurements): BusteResult {
     { key: "profEncolureDos", label: "Profondeur d'encolure dos (cou/16)", value: profEncolureDos, unit: "cm", bookRef: "p. 40", arrondi: true },
     { key: "profEncolureDevant", label: "Profondeur d'encolure devant (largeur + 2)", value: profEncolureDevant, unit: "cm", bookRef: "p. 40", arrondi: true },
     { key: "pinceBretelle", label: "Pince bretelle (poitrine/20 + 1)", value: valeurBretelle, unit: "cm", bookRef: "p. 52" },
+    { key: "retablissementCarrureDevant", label: "Rétablissement carrure devant", value: retablissementCarrureDevant, unit: "cm", bookRef: "p. 53" },
+    { key: "retablissementBissectriceDevant", label: "Rétablissement guide de bissectrice devant", value: retablissementBissectriceDevant, unit: "cm", bookRef: "p. 53" },
+    { key: "retablissementEmmanchureDevant", label: "Rétablissement largeur d'emmanchure devant", value: retablissementEmmanchureDevant, unit: "cm", bookRef: "p. 53" },
     { key: "aAbsorberHaut", label: "À absorber à la taille (haut, par quart)", value: aAbsorberHaut, unit: "cm", bookRef: "p. 56" },
     { key: "aAbsorberBas", label: "À absorber à la taille (bas, par quart)", value: aAbsorberBas, unit: "cm", bookRef: "p. 56" },
     {
@@ -634,7 +917,16 @@ export function draftBuste(m: Measurements): BusteResult {
     { key: "emmanchureDevant", label: "Longueur d'emmanchure devant (mesurée)", value: emmanchureDevant, unit: "cm" },
   );
 
-  return { dos: dosPiece, devant: devantPiece, report: { values, warnings } };
+  for (const assemblyCheck of assemblyChecks) {
+    if (!assemblyCheck.passed) {
+      warnings.push({
+        code: assemblyCheck.id,
+        message: `Contrôle assemblé ${assemblyCheck.id} hors tolérance : écart ${assemblyCheck.gapCm.toFixed(3)} cm, différence d'épaule ${assemblyCheck.lengthDifferenceCm.toFixed(3)} cm, cassure ${assemblyCheck.tangentMismatchDeg.toFixed(1)}°.`
+      });
+    }
+  }
+
+  return { dos: dosPiece, devant: devantPiece, report: { values, warnings, assemblyChecks } };
 }
 
 /** Utilitaire de rapport : valeur par clé (tests, panneau). */

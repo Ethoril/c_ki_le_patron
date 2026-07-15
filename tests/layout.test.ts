@@ -10,6 +10,8 @@ import { translatePiece, ECART_PIECES } from "../src/engine/layout";
 import { DEMO_MEASUREMENTS } from "../src/engine/measurements";
 import { boundingBox } from "../src/engine/geometry/path";
 import { curveLength } from "../src/engine/geometry/curve";
+import { closeDart } from "../src/engine/assembly";
+import { dist } from "../src/engine/geometry/point";
 
 const demo = DEMO_MEASUREMENTS;
 
@@ -31,6 +33,15 @@ describe("translatePiece", () => {
     const moved = translatePiece(dos, 10, 2).darts.find((d) => d.id === "pince-demi-dos")!;
     expect(moved.apexBas!.x).toBeCloseTo(pince.apexBas!.x + 10, 6);
     expect(moved.apexBas!.y).toBeCloseTo(pince.apexBas!.y + 2, 6);
+  });
+
+  it("préserve la fermeture des pinces et translate les coutures nommées", () => {
+    const { dos } = draftBuste(demo);
+    const moved = translatePiece(dos, 10, 2);
+    const pince = moved.darts.find((d) => d.id === "pince-epaule-dos")!;
+    expect(dist(closeDart(pince, pince.legs[1]), pince.legs[0])).toBeLessThan(1e-9);
+    expect(moved.seams.epaule.path).toHaveLength(dos.seams.epaule.path.length);
+    expect(moved.seams.epaule.path[0].kind).toBe("line");
   });
 });
 

@@ -8,7 +8,7 @@
 import type { Pt } from "./geometry/point";
 import type { Curve } from "./geometry/curve";
 import type { Segment } from "./geometry/path";
-import type { DraftStep, Dart, Mark, Label, PatternPiece } from "./types";
+import type { DraftStep, Dart, Mark, Label, PatternPiece, Seam, StepMetadata } from "./types";
 
 /**
  * Polyligne de tracé d'une pince. Pince simple : V d'une jambe à l'autre par
@@ -34,23 +34,47 @@ export class Draft {
   private steps: DraftStep[] = [];
   private points: Record<string, Pt> = {};
   private curves: Record<string, Curve> = {};
+  private contourSegments: Record<string, Segment> = {};
   private outline: Segment[] = [];
   private refLines: Segment[] = [];
   private helpers: Segment[] = [];
   private darts: Dart[] = [];
   private marks: Mark[] = [];
   private labels: Label[] = [];
+  private seams: Record<string, Seam> = {};
 
   constructor(id: string, title: string) {
     this.id = id;
     this.title = title;
   }
 
+  private recordStep(
+    id: string,
+    type: DraftStep["type"],
+    geometry: DraftStep["geometry"],
+    label?: string,
+    bookRef?: string,
+    metadata: StepMetadata = {},
+  ): void {
+    this.steps.push({
+      id,
+      type,
+      geometry,
+      label,
+      bookRef,
+      dependsOn: [...(metadata.dependsOn ?? [])],
+      inputs: { ...(metadata.inputs ?? {}) },
+      origin: metadata.origin ?? (bookRef ? "method" : "project-choice"),
+      status: metadata.status ?? "validated",
+      diagnostics: [...(metadata.diagnostics ?? [])],
+    });
+  }
+
   /** Enregistre un point nommé. Retourne le point pour chaîner les constructions. */
-  point(id: string, p: Pt, label?: string, bookRef?: string): Pt {
+  point(id: string, p: Pt, label?: string, bookRef?: string, metadata?: StepMetadata): Pt {
     if (this.points[id]) throw new Error(`Draft ${this.id}: point "${id}" déjà défini`);
     this.points[id] = p;
-    this.steps.push({ id, type: "point", geometry: p, label, bookRef });
+    this.recordStep(id, "point", p, label, bookRef, metadata);
     return p;
   }
 
@@ -68,45 +92,74 @@ export class Draft {
   }
 
   /** Ligne de référence (rouge) : milieux, ligne de taille. */
-  lineRef(id: string, a: Pt, b: Pt, label?: string, bookRef?: string): void {
+  lineRef(id: string, a: Pt, b: Pt, label?: string, bookRef?: string, metadata?: StepMetadata): void {
     const seg: Segment = { kind: "line", a, b };
     this.refLines.push(seg);
-    this.steps.push({ id, type: "lineRef", geometry: seg, label, bookRef });
+    this.recordStep(id, "lineRef", seg, label, bookRef, metadata);
   }
 
   /** Ligne d'aide (grise) : carrure, ligne de poitrine… */
-  helper(id: string, a: Pt, b: Pt, label?: string, bookRef?: string): void {
+  helper(id: string, a: Pt, b: Pt, label?: string, bookRef?: string, metadata?: StepMetadata): void {
     const seg: Segment = { kind: "line", a, b };
     this.helpers.push(seg);
-    this.steps.push({ id, type: "helper", geometry: seg, label, bookRef });
+    this.recordStep(id, "helper", seg, label, bookRef, metadata);
   }
 
   /** Segment de contour (tracé noir). L'ordre des appels définit l'ordre du contour. */
-  line(id: string, a: Pt, b: Pt, label?: string, bookRef?: string): void {
+  line(id: string, a: Pt, b: Pt, label?: string, bookRef?: string, metadata?: StepMetadata): void {
     const seg: Segment = { kind: "line", a, b };
     this.outline.push(seg);
-    this.steps.push({ id, type: "line", geometry: seg, label, bookRef });
+    this.contourSegments[id] = seg;
+    this.recordStep(id, "line", seg, label, bookRef, metadata);
   }
 
   /** Courbe de contour nommée (encolure, emmanchure). */
-  curve(id: string, c: Curve, label?: string, bookRef?: string): void {
+  curve(id: string, c: Curve, label?: string, bookRef?: string, metadata?: StepMetadata): void {
     if (this.curves[id]) throw new Error(`Draft ${this.id}: courbe "${id}" déjà définie`);
     this.curves[id] = c;
     const seg: Segment = { kind: "curve", c };
     this.outline.push(seg);
-    this.steps.push({ id, type: "curve", geometry: seg, label, bookRef });
+    this.contourSegments[id] = seg;
+    this.recordStep(id, "curve", seg, label, bookRef, metadata);
   }
 
-  dart(d: Dart): void {
+  dart(d: Dart, bookRef?: string, metadata?: StepMetadata): void {
     this.darts.push(d);
+    this.recordStep(d.id, "dart", d, d.label, bookRef, metadata);
   }
 
-  mark(m: Mark): void {
+  mark(m: Mark, bookRef?: string, metadata?: StepMetadata): void {
     this.marks.push(m);
+    this.recordStep(m.id, "mark", m, m.label, bookRef, metadata);
   }
 
   label(l: Label): void {
     this.labels.push(l);
+  }
+
+  /** Nomme une couture à partir de segments de contour déjà enregistrés. */
+  seam(
+    id: string,
+    stepIds: string[],
+    from: string,
+    to: string,
+    metadata: Pick<StepMetadata, "origin" | "status"> = {},
+  ): void {
+    if (this.seams[id]) throw new Error(`Draft ${this.id}: couture "${id}" déjà définie`);
+    const path = stepIds.map((stepId) => {
+      const segment = this.contourSegments[stepId];
+      if (!segment) throw new Error(`Draft ${this.id}: segment de couture "${stepId}" inconnu`);
+      return segment;
+    });
+    this.seams[id] = {
+      id,
+      path,
+      stepIds: [...stepIds],
+      from,
+      to,
+      origin: metadata.origin ?? "method",
+      status: metadata.status ?? "validated",
+    };
   }
 
   toPiece(): PatternPiece {
@@ -122,6 +175,7 @@ export class Draft {
       steps: this.steps,
       points: { ...this.points },
       curves: { ...this.curves },
+      seams: { ...this.seams },
     };
   }
 }
