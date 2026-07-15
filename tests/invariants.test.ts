@@ -13,6 +13,7 @@ import { dartOutline } from "../src/engine/drafting";
 import { dist } from "../src/engine/geometry/point";
 import { startTangent, endTangent, curveToPolyline, curveLength } from "../src/engine/geometry/curve";
 import { isClosed, outlineArea, selfIntersects } from "../src/engine/geometry/path";
+import { closeDart, reopenDart } from "../src/engine/assembly";
 
 /** PRNG déterministe (mulberry32) : les 200 cas sont les mêmes à chaque run. */
 function mulberry32(seed: number) {
@@ -75,18 +76,34 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("épaule dos = mesure ; épaule devant (hors pince) = mesure − 1 (embu, p. 47)", () => {
+  it("épaules fermées dos/devant = mesure ; pince dos réversible (C12-C13)", () => {
     for (const m of bodies) {
       const { dos, devant } = draftBuste(m);
-      const epauleDos = dist(dos.points["snp-dos"], dos.points["epaule-dos"]);
+      const pinceDos = dos.darts.find((d) => d.id === "pince-epaule-dos")!;
+      const epauleDosFermee = closeDart(pinceDos, dos.points["epaule-dos"]);
+      const epauleDos =
+        dist(dos.points["snp-dos"], pinceDos.legs[0]) + dist(pinceDos.legs[0], epauleDosFermee);
       const epauleDevant =
         dist(devant.points["snp-devant"], devant.points["pince-bretelle-1"]) +
         dist(devant.points["pince-bretelle-2"], devant.points["epaule-devant"]);
       expect(epauleDos).toBeCloseTo(m.longueurEpaule, 6);
-      expect(epauleDevant).toBeCloseTo(m.longueurEpaule - METHOD.EMBU_EPAULE_DOS, 6);
+      expect(epauleDevant).toBeCloseTo(m.longueurEpaule, 6);
+      expect(dist(closeDart(pinceDos, pinceDos.legs[1]), pinceDos.legs[0])).toBeLessThan(1e-9);
+      const rouverte = reopenDart(pinceDos, epauleDosFermee);
+      expect(dist(rouverte, dos.points["epaule-dos"])).toBeLessThan(1e-9);
       // pente mesurée → le dénivelé vertical de l'épaule dos est la mesure
       if (m.penteEpaule !== undefined) {
-        expect(dos.points["epaule-dos"].y - dos.points["snp-dos"].y).toBeCloseTo(m.penteEpaule, 6);
+        expect(epauleDosFermee.y - dos.points["snp-dos"].y).toBeCloseTo(m.penteEpaule, 6);
+      }
+    }
+  });
+
+  it("encolure et emmanchure restent continues après fermeture et assemblage", () => {
+    for (const m of bodies) {
+      const { report } = draftBuste(m);
+      expect(report.assemblyChecks).toHaveLength(2);
+      for (const check of report.assemblyChecks) {
+        expect(check.passed, `${check.id} (${JSON.stringify(m)}): ${JSON.stringify(check)}`).toBe(true);
       }
     }
   });
@@ -103,13 +120,28 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("fermeture de bretelle (C11) : carrure devant et dessous-bras gardent leurs mesures d'origine", () => {
+  it("rétablissement de bretelle (C11) : largeurs ouvertes moins reports = mesures fermées", () => {
     for (const m of bodies) {
-      const { devant } = draftBuste(m);
+      const { devant, report } = draftBuste(m);
       const largeurPlanche = (m.tourPoitrine + (m.aisance ?? 0)) / 2;
-      expect(devant.points["carrure-devant"].x).toBeCloseTo(largeurPlanche - m.carrureDevant / 2, 6);
+      const get = (key: string) => report.values.find((value) => value.key === key)!.value;
+      expect(devant.points["carrure-devant"].x + get("retablissementCarrureDevant")).toBeCloseTo(
+        largeurPlanche - m.carrureDevant / 2,
+        6,
+      );
       expect(devant.points["carrure-devant"].y).toBeCloseTo(m.longueurDos / 3, 6);
-      expect(devant.points["dessous-bras"].x).toBeCloseTo(largeurPlanche / 2 - 1, 6);
+      expect(devant.points["dessous-bras"].x + get("retablissementEmmanchureDevant")).toBeCloseTo(
+        largeurPlanche / 2 - 1,
+        6,
+      );
+      const coinX = largeurPlanche - m.carrureDevant / 2;
+      expect(devant.points["bissectrice-devant"].x + get("retablissementBissectriceDevant")).toBeCloseTo(
+        coinX - METHOD.BISSECTRICE_EMMANCHURE_DEVANT * Math.SQRT1_2,
+        6,
+      );
+      expect(get("retablissementCarrureDevant")).toBeGreaterThanOrEqual(0);
+      expect(get("retablissementBissectriceDevant")).toBeGreaterThanOrEqual(0);
+      expect(get("retablissementEmmanchureDevant")).toBeGreaterThanOrEqual(0);
     }
   });
 
@@ -165,9 +197,10 @@ describe("invariants sur 200 mensurations plausibles", () => {
     }
   });
 
-  it("coutures de côté dos et devant de même longueur sur TOUTE la hauteur (emmanchure → bassin)", () => {
-    // ligne haute + platitude à cheval sur la taille + courbe basse + ligne
-    // de côté basse jusqu'au bassin — le côté s'assemble bord à bord (p. 76)
+  it("coutures de côté homologues après absorption du rétablissement C11", () => {
+    // Le patron ouvert porte un petit supplément en tête de côté devant. Pour
+    // comparer l'état utile, on remplace ce seul segment par celui partant du
+    // dessous-bras de référence ; toute la couture sous-jacente reste commune.
     const longueurCote = (piece: ReturnType<typeof draftBuste>["dos"]) =>
       dist(piece.points["dessous-bras"], piece.points["cote-platitude-haut"]) +
       dist(piece.points["cote-platitude-haut"], piece.points["cote-platitude-bas"]) +
@@ -175,7 +208,14 @@ describe("invariants sur 200 mensurations plausibles", () => {
       dist(piece.points["jonction-cote-bas"], piece.points["bassin-cote"]);
     for (const m of bodies) {
       const { dos, devant } = draftBuste(m);
-      expect(longueurCote(dos)).toBeCloseTo(longueurCote(devant), 6);
+      const largeurPlanche = (m.tourPoitrine + (m.aisance ?? 0)) / 2;
+      const hautOuvert = dist(devant.points["dessous-bras"], devant.points["cote-platitude-haut"]);
+      const hautFerme = dist(
+        { x: largeurPlanche / 2 - 1, y: devant.points["dessous-bras"].y },
+        devant.points["cote-platitude-haut"],
+      );
+      const coteDevantUtile = longueurCote(devant) - hautOuvert + hautFerme;
+      expect(longueurCote(dos)).toBeCloseTo(coteDevantUtile, 6);
     }
   });
 

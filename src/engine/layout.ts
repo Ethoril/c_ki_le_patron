@@ -13,6 +13,7 @@ import type { Curve } from "./geometry/curve";
 import type { Segment } from "./geometry/path";
 import { boundingBox } from "./geometry/path";
 import type { PatternPiece, Dart, Mark, DraftStep } from "./types";
+import { composeTransforms, translationTransform } from "./geometry/transform";
 
 /** Blanc minimal entre deux pièces sur la planche (cm). */
 export const ECART_PIECES = 5;
@@ -37,12 +38,18 @@ function moveSegment(s: Segment, dx: number, dy: number): Segment {
 }
 
 function moveDart(d: Dart, dx: number, dy: number): Dart {
+  const move = translationTransform(dx, dy);
+  const unmove = translationTransform(-dx, -dy);
   return {
     ...d,
     legs: [movePt(d.legs[0], dx, dy), movePt(d.legs[1], dx, dy)],
     apex: movePt(d.apex, dx, dy),
+    pivot: movePt(d.pivot, dx, dy),
     apexBas: d.apexBas ? movePt(d.apexBas, dx, dy) : undefined,
     axis: [movePt(d.axis[0], dx, dy), movePt(d.axis[1], dx, dy)],
+    closeTransform: d.closeTransform
+      ? composeTransforms(composeTransforms(unmove, d.closeTransform), move)
+      : undefined,
   };
 }
 
@@ -52,7 +59,14 @@ function moveMark(m: Mark, dx: number, dy: number): Mark {
 
 function moveStep(s: DraftStep, dx: number, dy: number): DraftStep {
   const g = s.geometry;
-  const geometry = "kind" in g ? moveSegment(g, dx, dy) : movePt(g, dx, dy);
+  const geometry =
+    s.type === "dart"
+      ? moveDart(g as Dart, dx, dy)
+      : s.type === "mark"
+        ? moveMark(g as Mark, dx, dy)
+        : s.type === "point"
+          ? movePt(g as Pt, dx, dy)
+          : moveSegment(g as Segment, dx, dy);
   return { ...s, geometry };
 }
 
@@ -70,6 +84,12 @@ export function translatePiece(piece: PatternPiece, dx: number, dy: number): Pat
     steps: piece.steps.map((s) => moveStep(s, dx, dy)),
     points: Object.fromEntries(Object.entries(piece.points).map(([k, p]) => [k, movePt(p, dx, dy)])),
     curves: Object.fromEntries(Object.entries(piece.curves).map(([k, c]) => [k, moveCurve(c, dx, dy)])),
+    seams: Object.fromEntries(
+      Object.entries(piece.seams).map(([k, seam]) => [
+        k,
+        { ...seam, path: seam.path.map((segment) => moveSegment(segment, dx, dy)) },
+      ]),
+    ),
   };
 }
 

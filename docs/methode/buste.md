@@ -32,8 +32,8 @@
 
 | # | Point | v2 | v3 (livre, page) |
 |---|---|---|---|
-| C11 | Ordre de tracé de l'emmanchure devant | « la pince bretelle est fermée AVANT de tracer l'emmanchure » | Faux comme récit : l'emmanchure est tracée dès p. 42-44 (épaules encore rectilignes), puis **retracée deux fois** — après la pince d'épaule dos (p. 48, de l'épaule à la carrure) et après la pince bretelle (p. 53, « rétablissement des mesures » : les valeurs avalées par la fermeture sont re-mesurées sur les lignes de carrure et d'emmanchure et reportées depuis la courbe, nouvelle courbe par les points 1-2-3). **Le résultat net valide le choix v1/v2** : carrure, bissectrice et dessous-bras retrouvent leurs positions d'origine, seuls la seconde moitié d'épaule et le haut de courbe bougent |
-| C12 | Pince d'épaule dos | option absorbée par défaut | p. 48 « À noter » : la construction du patron de base doit **impérativement** comporter cette pince pour que le tracé d'emmanchure soit correct. L'absorption dans l'épaule (p. 47, fig. 4) reste une option montrée par le livre (pas de découpe emmanchure/milieu dos), l'écart y est chiffré **1 cm, dos plus long que devant**, résorbé au montage (bords en faux biais) — résout l'[À VALIDER] v2 sur le sens de l'écart. Cible v3+ : tracer la vraie pince (voir §9) |
+| C11 | Ordre de tracé de l'emmanchure devant | « la pince bretelle est fermée AVANT de tracer l'emmanchure » | Faux comme récit : l'emmanchure est tracée dès p. 42-44 (épaules encore rectilignes), puis **retracée deux fois** — après la pince d'épaule dos (p. 48, de l'épaule à la carrure) et après la pince bretelle (p. 53, « rétablissement des mesures »). Les largeurs avalées par le triangle sont mesurées sur les lignes de carrure et d'emmanchure, puis reportées **vers l'extérieur depuis la courbe** avant le nouveau tracé par les points 1-2-3. Les repères du patron ouvert se déplacent donc ; ce sont leurs **largeurs utiles pince fermée** qui retrouvent les mesures d'origine. L'ancienne lecture « carrure et dessous-bras ouverts inchangés » était erronée et masquait une emmanchure devant trop longue. |
+| C12 | Pince d'épaule dos | option absorbée par défaut | p. 48 « À noter » : la construction du patron de base doit **impérativement** comporter cette pince pour que le tracé d'emmanchure soit correct. L'absorption dans l'épaule (p. 47, fig. 4) reste une option montrée par le livre (pas de découpe emmanchure/milieu dos), l'écart y est chiffré **1 cm, dos plus long que devant**, résorbé au montage (bords en faux biais) — résout l'[À VALIDER] v2 sur le sens de l'écart. **Décision M3.1 du 15 juillet 2026 : la vraie pince devient la construction principale ; l'option absorbée reste documentée comme variante.** Voir §8. |
 | C13 | Construction de la pince d'épaule dos | non chiffrée | axe **au milieu de la largeur d'épaule**, perpendiculaire à la ligne d'épaule inclinée, **longueur 7 cm** ; largeur standard **1 cm** (dos arrondi : jusqu'à 2 cm de large et 5 cm de long) ; après fermeture : **rallonger l'extrémité d'épaule de la valeur de la pince** puis retracer l'emmanchure jusqu'à la carrure, et retracer l'épaule à la règle **à 18°** pince fermée (p. 46-48). NB : le livre écrit « 1 cm de part et d'autre de l'axe » puis parle d'une « valeur de 1 cm » — lecture retenue : **largeur totale 1 cm** (cohérent avec « environ 1 à 2 cm » p. 46 et « augmentée à 2 cm » p. 48) **[AMBIGUÏTÉ notée]** |
 | C14 | Direction du report de la valeur bretelle | non précisée | depuis le milieu d'épaule **vers l'emmanchure** (fig. 5-6 p. 52 : 1er bras au milieu, 2e bras côté emmanchure) ; fermeture pliée sur le 1er bras, valeur couchée **vers le milieu devant** |
 | C15 | Retrait de pointe des pinces au saillant | pince de taille arrêtée 4 cm sous le saillant (source tierce) | livre : sur le TRACÉ, bretelle et pince de taille forment **une ligne continue interrompue par la croix du saillant** (p. 75 ; planches p. 55 « juste sous la croix » et p. 68 : les pointes se rejoignent). La **platitude de poitrine ≈ 2 cm à l'extrémité de CHAQUE pince** est une consigne de **MONTAGE** (épinglage arrêté avant la pointe, valeur fonction du volume de poitrine, ajustée à l'essayage, p. 75) — elle ne se dessine pas. **Re-tranché le 2026-07-15** (contrôle sur la planche du patron fini) : sommet de la pince de taille AU saillant ; `PLATITUDE_POITRINE = 2` reste en constante de montage, plus de retrait dessiné |
@@ -339,6 +339,17 @@ ligne de carrure** (fig. 1 : rallonge en bleu, nouvelle courbe en vert).
 ligne d'épaule — fermer (point A sur point B), retracer à la règle **à 18°**,
 couper le papier pince fermée le long de la nouvelle ligne.
 
+**Transcription moteur validée pour M3.1 (15 juillet 2026)** : les deux repères
+de jambe sont espacés de 1 cm autour du milieu de l'épaule initiale ; la pointe
+est placée à 7 cm sur leur médiatrice, perpendiculaire à l'épaule. Le bloc côté
+emmanchure est fermé par rotation de la seconde jambe sur la première. Dans cet
+état fermé, l'épaule est rectifiée à l'angle effectif du dos (18° sans mesure
+de pente) et sa longueur finie reste égale à la longueur d'épaule mesurée — ce
+qui représente la rallonge prescrite après absorption de la bouche. La pointe
+d'épaule rectifiée est ensuite rouverte par la transformation inverse ;
+l'emmanchure repart de cette pointe et rejoint les points de carrure validés.
+La fermeture puis la réouverture doivent être réversibles numériquement.
+
 ## 9. Pince bretelle (p. 49-53)
 
 **Rôles** (p. 49-50) : (1) ajuster l'emmanchure pour qu'elle **ne bâille
@@ -394,11 +405,28 @@ respectant la platitude. Après fermeture, les largeurs retrouvent leurs
 mesures de départ. Le petit triangle qui dépasse au-dessus de l'épaule pince
 fermée est le **chapeau de pince** (fig. 9) — il sert au montage (p. 74).
 
-Équivalent moteur (choix v1/v2, validé par ce rétablissement) : rotation de la
-seconde moitié d'épaule autour du saillant d'un angle
-θ = 2·asin(v / (2·|jambe 1|)) ; carrure, bissectrice et dessous-bras ne
-bougent pas ; la spline lisse le raccord ; la seconde moitié d'épaule repart
-de `pince-bretelle-2` à 26°.
+Équivalent moteur : rotation de la seconde moitié d'épaule autour du saillant
+d'un angle θ = 2·asin(v / (2·|jambe 1|)), puis rétablissement horizontal des
+repères extérieurs. À une hauteur `y` comprise entre l'épaule et le saillant,
+la valeur avalée est la distance horizontale entre les deux bras du triangle :
+
+```text
+δ(y) = |x(jambe 1 → saillant, y) − x(jambe 2 → saillant, y)|
+x_ouvert(y) = x_référence(y) − δ(y)   // devant : extérieur vers la gauche
+```
+
+La formule est appliquée exactement aux lignes de carrure et d'emmanchure.
+Pour le guide de bissectrice situé entre elles, `δ(y)` est évalué à sa propre
+hauteur — ce qui revient à interpoler linéairement les deux reports, puisque
+les bras de pince sont droits. La platitude est translatée du report de la
+ligne d'emmanchure. Ainsi, sur le patron ouvert, carrure, bissectrice,
+platitude et dessous-bras se déplacent vers l'extérieur ; après absorption de
+`δ`, les demi-largeurs utiles retrouvent les mesures de départ. La seconde
+moitié d'épaule repart toujours de `pince-bretelle-2` à 26°.
+
+Ce rétablissement est une étape géométrique de la méthode, pas un réglage de
+la longueur d'arc : l'écart dos/devant reste un contrôle a posteriori et ne
+doit jamais servir à déplacer automatiquement les repères.
 
 **Cas sans pince** (p. 53) : vêtements décontractés, larges ou extensibles →
 utiliser le **tracé de base sans pince** (fig. 9, noir ; exemples p. 87-89,
@@ -832,15 +860,17 @@ D5. **Épaule devant + pince bretelle** (§4, §9). Épaule provisoire à 26°
    (C14) → `pince-bretelle-2` ; 2e bras égalisé sur le 1er. Fermeture
    (équivalent rotation autour du saillant, θ = 2·asin(v/(2·|jambe 1|))) ;
    la seconde moitié d'épaule repart de `pince-bretelle-2` à 26°.
-D6. **Points d'emmanchure devant** (§5). Carrure devant/2 (< carrure dos/2,
-   contrôle) ; bissectrice 2,5 ; platitude 1 cm. **Choix v1 validé par le
-   rétablissement des mesures p. 53 (C11)** : carrure, bissectrice et
-   dessous-bras ne bougent pas à la fermeture de la bretelle ; seuls la
-   seconde moitié d'épaule et le haut de courbe sont portés par la rotation.
+D6. **Points d'emmanchure devant** (§5). Les références fermées sont carrure
+   devant/2 (< carrure dos/2, contrôle), bissectrice 2,5 et platitude 1 cm.
+   Le rétablissement p. 53 (C11) mesure `δ(y)` entre les bras de bretelle et
+   reporte cette valeur vers l'extérieur sur la carrure, la bissectrice (à sa
+   hauteur), la platitude et le dessous-bras du patron ouvert. Les largeurs
+   utiles après absorption de la pince, et non les coordonnées ouvertes,
+   doivent retrouver les mesures de référence.
 D7. **Emmanchure devant** (§6). Spline extrémité d'épaule (pivotée) → carrure
    → bissectrice (2,5, tangente 45°) → platitude → `dessous-bras` =
-   (poitrine/4 + 1 local, y emmanchure). Virage plus ample que le dos par
-   construction.
+   (référence poitrine/4 + 1 local − `δ(y_emmanchure)`, y emmanchure) sur le
+   patron ouvert. Virage plus ample que le dos par construction.
 D8. **Pinces de taille devant** (§10-11). Pince du devant : axe vertical par
    le saillant, valeur équilibrée des deux côtés, ≤ 3 cm ; haut : sommet À
    la croix du saillant — ligne continue avec la bretelle (C15, re-tranché
@@ -870,8 +900,9 @@ D9. **Côté devant et bas** : droite de `dessous-bras` à la platitude du point
   absente = standard 20 cm (generalites §6, FDA 17-23). L'aisance globale
   s'ajoute aussi au tour de bassin ; U_bas = (bassin − taille)/4 reste sur
   les mesures du corps.
-- Pince d'épaule dos absorbée (option p. 47) plutôt que tracée — voir C12
-  pour la cible v3+.
+- Pince d'épaule dos réelle depuis M3.1 : bouche totale 1 cm, axe 7 cm,
+  épaule rectifiée dans l'état fermé puis rouverte. L'absorption dans l'épaule
+  (option p. 47) reste une variante documentée, non sélectionnée par défaut.
 - Rotation de pince bretelle limitée à la seconde moitié d'épaule et au haut
   d'emmanchure — désormais adossée au « rétablissement des mesures » p. 53
   (C11).
@@ -931,15 +962,20 @@ neutre, le tracé est exactement celui du livre.
 ## Invariants testés (tests/invariants.test.ts)
 
 - Contour fermé, sans auto-intersection, aire positive (chaque pièce).
-- Épaules : |épaule devant hors pince| = |épaule dos| − 1 cm (option pince
-  absorbée ; écart = embu du montage, p. 47).
+- Épaules M3.1 : dans l'état fermé, dos = devant = longueur d'épaule mesurée ;
+  la pince dos se ferme jambe 2 sur jambe 1 et se rouvre sans perte numérique.
+- Pince d'épaule dos : bouche 1 cm, axe 7 cm, jambes égales ; ligne fermée
+  rectifiée à l'angle effectif du dos, puis emmanchure retracée depuis la
+  pointe rouverte.
 - Jambes de pince bretelle égalisées : ||jambe 1| − |jambe 2|| < 0,01.
 - Largeur à la taille après déduction des pinces = (taille + aisance)/4 ∓ 1,
   à l'excédent signalé près.
 - Extensions neutres → géométrie strictement identique au tracé du livre ;
   pente mesurée → dénivelé vertical de l'épaule dos = pente (plafonné 45°).
-- Pinces de côté dos et devant de même valeur ; coutures de côté dos =
-  devant sur TOUTE la longueur (emmanchure → bassin).
+- Pinces de côté dos et devant de même valeur ; sous le supplément ouvert de
+  C11, les coutures de côté dos/devant sont homologues jusqu'au bassin. La
+  comparaison de leur état utile remplace le seul segment haut devant par
+  celui partant du dessous-bras de référence fermé.
 - Bas du gabarit : largeur au bassin = (bassin + aisance)/4 ∓ 1 ; côté bas
   dos = côté bas devant = (bassin − poitrine)/4 + côté haut ; la courbe de
   côté basse ne revient jamais sur la ligne de côté basse au-dessus de la
@@ -951,91 +987,31 @@ neutre, le tracé est exactement celui du livre.
   à la nuque ; gorge à tangente horizontale au milieu devant.
 - Emmanchures : passage à moins d'un epsilon des points imposés (carrure,
   bissectrice, platitude) ; arrivée horizontale au dessous-bras.
+- Vues assemblées : coutures d'épaule superposées pinces fermées ; encolure et
+  emmanchure continues au raccord dans une tolérance angulaire de 0,5°.
 - Golden tests (profil 88/68/92, cou 38) : largeur encolure 7,33 ;
   profondeur dos 2,375 ; profondeur devant 9,33 ; pince bretelle 5,4 ;
   U = 5 ; répartition c=2, dF=3, dB=2, mD=1.
-- **Candidats v3 (à ajouter avec les corrections de code)** : différence de
-  longueur d'emmanchure dos/devant dans [1, 2] cm (avertissement hors plage,
-  p. 65 — C17) ; carrure devant < carrure dos (validation de saisie, p. 20 et
-  42) ; platitude d'encolure devant ≈ largeur/3 et profondeur/3 (C16).
+- Contrôle C17 : différence de longueur d'emmanchure dos/devant attendue dans
+  [1, 2] cm ; avertissement non bloquant hors plage. Carrure devant atypique :
+  avertissement de saisie. Platitudes d'encolure devant ≈ largeur/3 et
+  profondeur/3 couvertes par les golden tests.
 
-## À confronter au moteur (aide-mémoire — étape suivante, sans toucher au code)
+## Suivi après consolidation M3.1
 
-Règles à vérifier dans `src/engine/pieces/buste.ts` et `src/engine/method.ts`
-(aucune modification dans cette étape ; chaque écart avéré passera par un test
-avant correction) :
+Les points C11 à C17, les plafonds de pinces, les platitudes, les points
+imposés d'emmanchure et les contrôles de saisie sont désormais confrontés au
+moteur et couverts par les tests. La correction C11 donne, pour le profil
+démo, dos 17,61 cm et devant 19,39 cm, soit 1,77 cm : la plage indicative de
+1 à 2 cm est retrouvée sans normalisation automatique de l'arc.
 
-1. **Direction du report de la valeur de pince bretelle** : depuis le milieu
-   d'épaule **vers l'emmanchure** (C14, fig. 5-6 p. 52). Vérifier le signe
-   dans la construction de `pince-bretelle-2`.
-2. **Sens de l'écart d'épaule en option absorbée** : dos = longueur d'épaule,
-   devant = longueur d'épaule − 1 (dos plus long de 1 cm, fig. 4 p. 47 —
-   C12). Vérifier l'invariant existant et le commentaire du code.
-3. **Rétablissement post-bretelle** : carrure, bissectrice et platitude
-   inchangées après fermeture ; seconde moitié d'épaule repartant de
-   `pince-bretelle-2` à 26° avec sa longueur d'origine ; nouvelle courbe par
-   les 3 points (C11, p. 53). Confirmer que le moteur reproduit bien les
-   largeurs d'origine sur les lignes de carrure ET d'emmanchure.
-4. **Retrait de pointe de la pince de taille devant** : ~~décision à
-   prendre~~ re-tranché le 2026-07-15 (contrôle sur la planche du patron
-   fini) — AUCUN retrait dessiné : le sommet rejoint la croix du saillant,
-   ligne continue avec la bretelle (C15, p. 75) ; la platitude de poitrine
-   de 2 cm est une consigne de montage (`PLATITUDE_POITRINE` documentée
-   dans `method.ts`), couvert par golden test.
-5. **Plafonds et répartition des pinces de taille** : devant ≤ 3, côtés ≤ 4,
-   demi-dos ≤ 2, milieu dos ≤ 1-2 ; exemple normatif 1+2+2 / 2+3 (p. 55-57).
-   Vérifier constantes et algorithme (déjà couverts par golden test).
-6. **Axe de la pince demi-dos** : mi-distance entre bras de la pince de côté
-   et milieu dos / bras de la pince milieu dos quand elle existe (p. 55).
-   Vérifier le cas « pince milieu dos non nulle ».
-7. **Haut de la pince demi-dos** : ~~à vérifier~~ tranché le 2026-07-15 —
-   sommet posé SUR la ligne d'emmanchure, borne haute des planches (C20),
-   `SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE = 0` en place, couvert par golden
-   test.
-8. **Platitudes des pinces à la taille** : 2-4 cm, parts égales de part et
-   d'autre de la taille, inversement proportionnelles à la valeur (p. 59) ;
-   bras rectilignes arrêtés à la platitude, jonction légèrement courbée par
-   le repère de valeur (p. 60). Vérifier la fonction de platitude et la forme
-   émise au patron.
-9. **Encolure devant** : tangence verticale sous `snp-devant` sur
-   ≈ profondeur/3 et platitude ≈ largeur/3 à la gorge (C16). Vérifier les
-   tensions/poignées actuelles de la courbe.
-10. **Encolure dos** : platitude large depuis le milieu dos (p. 63) ;
-    continuité de la courbe à travers la ligne d'épaule quand dos et devant
-    sont assemblés (critère du livre, p. 63-64). Vérifier l'angle d'arrivée
-    côté épaule des deux courbes.
-11. **Emmanchure** : points imposés intouchables (épaule, carrure,
-    platitude), bissectrice seule ajustable (p. 42-43) ; tangente 45° à la
-    bissectrice ; arrivée horizontale au dessous-bras. Vérifier les
-    contraintes de la spline et la liberté laissée à la bissectrice.
-12. **Contrôle des longueurs d'emmanchure** : |L_dos − L_devant| ∈ [1, 2] cm
-    attendu (C17, p. 65) — à exposer comme avertissement dans le rapport
-    (pas une erreur dure : le sens dépend de la morphologie).
-13. **Validation de saisie** : carrure devant < carrure dos (p. 20, 42) — à
-    brancher côté formulaire/rapport.
-14. **Constantes `method.ts`** : angles 18/26, encolure (cou/6 + 1, cou/16,
-    +2), bissectrices 1,5/2,5, platitude d'emmanchure 1 cm, bretelle
-    poitrine/20 + 1, plafonds de pinces — tout doit y être nommé, aucune
-    valeur en dur dans `buste.ts` (règle du dépôt). Ajouter à terme :
-    pince d'épaule dos (1 cm × 7 cm), platitude de poitrine (2 cm),
-    élargissement de base (1/2/1), marges (1 ; côté toile 2-3), croisure
-    (2-3), différence d'emmanchure [1, 2].
-15. **Pince d'épaule dos tracée** (cible v3+, C12-C13) : à spécifier comme
-    évolution — axe mi-épaule, ⊥ à l'épaule, 7 cm, 1 cm de large, rallonge
-    d'extrémité, emmanchure retracée jusqu'à la carrure, épaule retracée à
-    18° pince fermée ; l'option absorbée devient un paramètre.
-16. **Gabarit sans pinces** (p. 86-89) : sous-produit d'export potentiel
-    (contour avant pinces) — à noter au cahier, pas au moteur v1.
-17. **Lissage de l'encolure** (constat visuel du 2026-07-15, à traiter) :
-    le col rendu paraît segmenté/anguleux — dos : une seule cubique
-    nuque → épaule ; devant : spline passant par les platitudes 1/3 — là où
-    le livre veut un arrondi doux tracé au perroquet (p. 63-64). À reprendre
-    avec la même démarche que l'emmanchure (allure « coup de perroquet »
-    validée livre en main, §6) : tangentes/poignées recalibrées sur les
-    planches, golden tests d'allure (pas de bec au raccord, courbure
-    continue), snapshot régénéré en le justifiant. Étape dédiée, hors
-    périmètre du bas au bassin.
-18. **Jonction de la couture de côté basse** : le choix [transcription]
-    « mi-distance petites hanches ↔ bassin » (§11) n'a pas encore pu être
-    jugé sur pièce — à confirmer ou ajuster à l'essayage
-    (`JONCTION_COTE_BAS_FRACTION`).
+Restent ouverts :
+
+1. **Lissage fin de l'encolure** : la continuité assemblée est vérifiée, mais
+   l'allure du coup de perroquet reste à comparer sur pièce avant toute
+   retouche de tension.
+2. **Jonction de la couture de côté basse** : le choix [transcription]
+   `JONCTION_COTE_BAS_FRACTION = 0.75` reste à confirmer ou ajuster à
+   l'essayage.
+3. **Variante absorbée et gabarit sans pinces** : conservés comme possibilités
+   documentées ; ils ne sont pas exposés par l'interface M3.1.
