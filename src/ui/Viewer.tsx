@@ -3,7 +3,7 @@
 import { useRef, useState, useMemo, useEffect } from "react";
 import type { Pattern } from "../engine/generate";
 import { boundingBox } from "../engine/geometry/path";
-import { PieceSvg } from "../render/svg";
+import { PieceSvg, ConstructionLabels } from "../render/svg";
 
 type ViewBox = { x: number; y: number; w: number; h: number };
 
@@ -97,6 +97,7 @@ export function Viewer({ pattern, construction }: { pattern: Pattern; constructi
       {pattern.pieces.map((p) => (
         <PieceSvg key={p.id} piece={p} construction={construction} />
       ))}
+      {construction && <ConstructionLabels pieces={pattern.pieces} />}
     </svg>
   );
 }
