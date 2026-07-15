@@ -1,8 +1,9 @@
 /**
  * Construction du buste de base (demi-dos + demi-devant), transcription
- * linéaire de docs/methode/buste.md (v2, validée sur les planches) — qui fait
- * autorité sur ce fichier. Blocs numérotés comme la note (dos 1-8, devant
- * D1-D9). Références de pages : Gilewska, « Les patrons de base sur mesure ».
+ * linéaire de docs/methode/buste.md (v3, chapitre complet relu page à page) —
+ * qui fait autorité sur ce fichier. Blocs numérotés comme la note (dos 1-8,
+ * devant D1-D9). Références de pages : Gilewska, « Les patrons de base sur
+ * mesure ».
  *
  * Repère : cm, y vers le bas, y = 0 sur la ligne d'épaule dos, milieu dos en
  * x = 0, milieu devant en x = poitrine/2. Les lignes de côté dos et devant
@@ -20,10 +21,43 @@ import type { PatternPiece, DraftReport, DraftWarning, ReportValue } from "../ty
 
 export type BusteResult = { dos: PatternPiece; devant: PatternPiece; report: DraftReport };
 
-/** Courbe d'encolure : tangente `t0` au départ, tangente `t1` à l'arrivée (échelle = corde). */
+/** Courbe d'encolure dos : tangente `t0` au départ, tangente `t1` à l'arrivée (échelle = corde). */
 function neckCurve(from: Pt, t0: Pt, to: Pt, t1: Pt) {
   const chord = dist(from, to);
   return hermite(from, scale(t0, chord), to, scale(t1, chord));
+}
+
+/**
+ * Encolure devant (p. 63-64, C16) : la courbe suit la ligne de gorge sur
+ * ≈ largeur/3 (platitude horizontale, repère `H`), tourne, vient suivre la
+ * verticale d'encolure sur ≈ profondeur/3 sous le point d'épaule (platitude
+ * verticale, tangence au repère `V` — les points de contrôle restent du côté
+ * intérieur : jamais d'échancrure au-delà de la verticale), et arrive sur
+ * `snp` PERPENDICULAIRE à la ligne d'épaule devant. Le dos arrivant lui
+ * aussi ⊥ à sa propre épaule, la courbe traverse la couture d'épaule sans
+ * cassure quand les pièces sont assemblées — le critère du livre (p. 63-64).
+ * Parcourue de la gorge vers l'épaule (ordre du contour).
+ */
+function courbeEncolureDevant(
+  gorge: Pt,
+  snp: Pt,
+  angleEpauleDeg: number,
+  tension: number,
+): { curve: Curve; platitudeGorge: Pt; platitudeVerticale: Pt } {
+  const f = METHOD.PLATITUDE_ENCOLURE_DEVANT;
+  const platitudeGorge = pt(gorge.x - (gorge.x - snp.x) * f, gorge.y);
+  const platitudeVerticale = pt(snp.x, snp.y + (gorge.y - snp.y) * f);
+  const a = (angleEpauleDeg * Math.PI) / 180;
+  const perp = pt(-Math.sin(a), -Math.cos(a)); // ⊥ à l'épaule, en montant vers le point d'encolure
+  return {
+    curve: splineThrough(
+      [gorge, platitudeGorge, platitudeVerticale, snp],
+      tension,
+      [pt(-1, 0), pt(-1, 0), pt(0, -1), perp],
+    ),
+    platitudeGorge,
+    platitudeVerticale,
+  };
 }
 
 /**
@@ -57,9 +91,9 @@ function courbeEmmanchure(
   const m1 = Math.min((dist(bissectrice, carrure) * (1 - tension)) / 6, valeurBissectrice, corde / 3);
   const dernier = haut.beziers[haut.beziers.length - 1];
   dernier.c2 = sub(bissectrice, scale(d45, m1)); // raccord C1 : même poignée que le virage
-  // poignée d'arrivée à la demi-corde : le virage tient sa hauteur puis la
-  // queue lèche la ligne au repère de platitude (calibré sur les planches)
-  const m2 = corde / 2;
+  // poignée d'arrivée : le virage tient sa hauteur puis la queue lèche la
+  // ligne au repère de platitude (fraction de corde calibrée sur les planches)
+  const m2 = METHOD.POIGNEE_ARRIVEE_EMMANCHURE * corde;
   const virage = hermite(bissectrice, scale(d45, 3 * m1), dessousBras, pt(sens * 3 * m2, 0));
   return concatCurves(haut, virage);
 }
@@ -158,7 +192,8 @@ export function draftBuste(m: Measurements): BusteResult {
   if (rep.pinceDemiDos > 0) {
     // axe à mi-distance entre le bras de la pince de côté et le milieu dos (cintré) — p. 54 ét. 5
     const xAxe = (tailleMilieuDos.x + tailleCoteDos.x) / 2;
-    const apex = pt(xAxe, yEmmanchure - METHOD.RETRAIT_SOMMET_PINCE_DOS);
+    // sommet SUR la ligne d'emmanchure, borne haute des planches (C20, p. 55)
+    const apex = pt(xAxe, yEmmanchure + METHOD.SOMMET_PINCE_DEMI_DOS_SOUS_EMMANCHURE);
     dos.dart({
       id: "pince-demi-dos",
       legs: [pt(xAxe - rep.pinceDemiDos / 2, yTaille), pt(xAxe + rep.pinceDemiDos / 2, yTaille)],
@@ -235,6 +270,22 @@ export function draftBuste(m: Measurements): BusteResult {
     pt(largeurPlanche, yEpauleDevant + profEncolureDevant),
     "Point de gorge : profondeur d'encolure devant",
     "p. 40",
+  );
+  // forme de l'encolure (p. 63-64, C16) : platitudes ≈ 1/3 et arrivée ⊥ à
+  // l'épaule (continuité de la courbe à travers la couture, dos et devant
+  // assemblés)
+  const encolureDevant = courbeEncolureDevant(gorge, snpDevant, angles.devant, METHOD.TENSION.encolureDevant);
+  devant.point(
+    "platitude-gorge",
+    encolureDevant.platitudeGorge,
+    "Repère de platitude de gorge (≈ largeur d'encolure / 3)",
+    "p. 64",
+  );
+  devant.point(
+    "platitude-verticale",
+    encolureDevant.platitudeVerticale,
+    "Repère de platitude verticale (≈ profondeur / 3 sous le point d'épaule)",
+    "p. 64",
   );
 
   // D3 — Saillant (p. 50, C7) : hauteur de poitrine VERTICALE sous la ligne d'épaule devant
@@ -316,7 +367,8 @@ export function draftBuste(m: Measurements): BusteResult {
   );
   const tailleMilieuDevant = devant.point("taille-milieu-devant", pt(largeurPlanche, yTaille));
   if (rep.pinceDevant > 0) {
-    const apex = pt(saillant.x, saillant.y + METHOD.RETRAIT_SOMMET_PINCE_DEVANT);
+    // pointe arrêtée à la platitude de poitrine sous le saillant (C15, p. 75)
+    const apex = pt(saillant.x, saillant.y + METHOD.PLATITUDE_POITRINE);
     devant.dart({
       id: "pince-taille-devant",
       legs: [pt(saillant.x - rep.pinceDevant / 2, yTaille), pt(saillant.x + rep.pinceDevant / 2, yTaille)],
@@ -334,11 +386,9 @@ export function draftBuste(m: Measurements): BusteResult {
   devant.line("milieu-devant", tailleMilieuDevant, gorge, "Milieu devant");
   devant.curve(
     "encolure-devant",
-    // suit la verticale d'encolure au départ du point d'épaule, tangente
-    // horizontale à la gorge (p. 63) — ici parcourue de la gorge vers l'épaule
-    neckCurve(gorge, pt(-1, 0), snpDevant, pt(0, -1)),
-    "Encolure devant : verticale à l'encolure, plate à la gorge",
-    "p. 40, 63",
+    encolureDevant.curve,
+    "Encolure devant : gorge plate, verticale suivie, arrivée ⊥ à l'épaule",
+    "p. 40, 63-64",
   );
   devant.line("epaule-devant-1", snpDevant, pb1, `Première moitié d'épaule devant (${angles.devant.toFixed(0)}°)`, "p. 41");
   devant.line("bouche-pince-bretelle", pb1, pb2, "Ouverture de la pince bretelle", "p. 52");
@@ -389,6 +439,17 @@ export function draftBuste(m: Measurements): BusteResult {
   const devantPiece = devant.toPiece();
   const emmanchureDos = curveLength(dosPiece.curves["emmanchure"]);
   const emmanchureDevant = curveLength(devantPiece.curves["emmanchure"]);
+
+  // Contrôle du livre (p. 65, C17) : écart normal de 1 à 2 cm entre les deux
+  // emmanchures, le sens dépendant de la morphologie — avertissement NON
+  // bloquant hors plage
+  const diffEmmanchure = Math.abs(emmanchureDos - emmanchureDevant);
+  if (diffEmmanchure < METHOD.DIFFERENCE_EMMANCHURE_MIN || diffEmmanchure > METHOD.DIFFERENCE_EMMANCHURE_MAX) {
+    warnings.push({
+      code: "difference-emmanchure",
+      message: `Écart de longueur d'emmanchure dos/devant de ${diffEmmanchure.toFixed(1)} cm, hors de la plage normale de ${METHOD.DIFFERENCE_EMMANCHURE_MIN} à ${METHOD.DIFFERENCE_EMMANCHURE_MAX} cm (p. 65) : vérifier l'inclinaison d'épaule et la répartition du tour de poitrine — le montage de la manche en pâtira.`,
+    });
+  }
 
   values.push(
     { key: "aisance", label: "Aisance ajoutée au tour", value: aisance, unit: "cm" },
