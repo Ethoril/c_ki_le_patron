@@ -543,6 +543,116 @@ describe("extension : pente d'épaule mesurée (buste.md §Extensions hors livre
   });
 });
 
+describe("golden : largeur du dos, alternative à la largeur d'épaule (p. 19, 41)", () => {
+  const lEnc = 38 / 6 + 1; // largeur d'encolure du profil démo
+  // p. 41 fig. 2 : la verticale de largeur dos / 2 coupe la droite à 18° partie
+  // de l'extrémité d'encolure ; l'épaule de 13 cm du démo y place l'acromion
+  const largeurDosEquivalente = 2 * (lEnc + 13 * Math.cos((18 * Math.PI) / 180));
+
+  it("la largeur du dos redonne la longueur d'épaule du livre", () => {
+    const { report } = draftBuste({ ...demo, longueurEpaule: undefined, largeurDos: largeurDosEquivalente });
+    expect(reportValue(report, "longueurEpauleDepuisLargeurDos")).toBeCloseTo(13, 9);
+    expect(reportValue(report, "angleEpauleDos")).toBe(18);
+  });
+
+  it("relevé équivalent : tracé identique au point près", () => {
+    const reference = draftBuste(demo);
+    const alternatif = draftBuste({ ...demo, longueurEpaule: undefined, largeurDos: largeurDosEquivalente });
+    for (const [id, p] of Object.entries(reference.dos.points)) {
+      expect(dist(alternatif.dos.points[id], p), `dos.${id}`).toBeLessThan(1e-9);
+    }
+    for (const [id, p] of Object.entries(reference.devant.points)) {
+      expect(dist(alternatif.devant.points[id], p), `devant.${id}`).toBeLessThan(1e-9);
+    }
+  });
+
+  it("l'acromion tombe sur la verticale de largeur dos / 2 (p. 41, fig. 2)", () => {
+    const { dos } = draftBuste({ ...demo, longueurEpaule: undefined, largeurDos: 40 });
+    const pince = dos.darts.find((d) => d.id === "pince-epaule-dos")!;
+    expect(closeDart(pince, dos.points["epaule-dos"]).x).toBeCloseTo(20, 9);
+  });
+
+  it("les deux mesures en désaccord : la largeur du dos fait foi, le livre demande de vérifier", () => {
+    const { report } = draftBuste({ ...demo, longueurEpaule: 13, largeurDos: 40 });
+    // 40/2 − 7,3333 = 12,6667 à 18° → 13,32 cm d'épaule, soit +0,32 sur la mesure
+    expect(reportValue(report, "longueurEpauleDepuisLargeurDos")).toBeCloseTo(
+      (20 - lEnc) / Math.cos((18 * Math.PI) / 180),
+      9,
+    );
+    expect(reportValue(report, "ecartEpauleLargeurDos")).toBeCloseTo(0.3187, 3);
+    // écart sous la tolérance : pas d'avertissement
+    expect(report.warnings.some((w) => w.code === "epaule-largeur-dos-discordante")).toBe(false);
+    const discordant = draftBuste({ ...demo, longueurEpaule: 13, largeurDos: 42 });
+    expect(discordant.report.warnings.some((w) => w.code === "epaule-largeur-dos-discordante")).toBe(true);
+  });
+
+  it("aucune des deux mesures : erreur bloquante sur les deux champs (p. 19)", () => {
+    const erreurs = validateBounds({ ...demo, longueurEpaule: undefined });
+    expect(erreurs.map((e) => e.key).sort()).toEqual(["largeurDos", "longueurEpaule"]);
+  });
+});
+
+describe("golden : mesures de vérification (p. 21, appliquées p. 51)", () => {
+  const lEnc = 38 / 6 + 1;
+  const profondeurDevant = lEnc + 2; // 9,3333
+  const yEpauleDevant = 41 - 44; // taille − longueur devant
+  // fig. 3 : saillant → gorge, lu sur le milieu devant
+  const saillantGorge = Math.hypot(18 / 2, 26 - profondeurDevant);
+  // fig. 4 : saillant → extrémité d'épaule, pince bretelle NON encore appliquée
+  const saillant = { x: 44 - 18 / 2, y: yEpauleDevant + 26 };
+  const a26 = (26 * Math.PI) / 180;
+  const acromion = {
+    x: 44 - lEnc - 13 * Math.cos(a26),
+    y: yEpauleDevant + 13 * Math.sin(a26),
+  };
+  const saillantAcromion = Math.hypot(saillant.x - acromion.x, saillant.y - acromion.y);
+
+  it("valeurs lues sur le tracé, mesures non renseignées", () => {
+    const { report } = draftBuste(demo);
+    expect(reportValue(report, "verificationProfondeurEncolure")).toBeCloseTo(saillantGorge, 9);
+    expect(reportValue(report, "verificationGalbeEpaule")).toBeCloseTo(saillantAcromion, 9);
+    expect(report.values.some((v) => v.key === "ecartProfondeurEncolure")).toBe(false);
+  });
+
+  it("mesures conformes au tracé : écart nul, aucun avertissement", () => {
+    const { report } = draftBuste({
+      ...demo,
+      hauteurProfondeurEncolure: saillantGorge,
+      hauteurGalbeEpaule: saillantAcromion,
+    });
+    expect(reportValue(report, "ecartProfondeurEncolure")).toBeCloseTo(0, 9);
+    expect(reportValue(report, "ecartGalbeEpaule")).toBeCloseTo(0, 9);
+    expect(reportValue(report, "profondeurEncolureSuggeree")).toBeCloseTo(profondeurDevant, 9);
+    expect(reportValue(report, "inclinaisonEpauleSuggeree")).toBeCloseTo(26, 6);
+    expect(report.warnings.some((w) => w.code.startsWith("verification-"))).toBe(false);
+  });
+
+  it("encolure trop profonde sur le tracé : le livre fait REMONTER la profondeur", () => {
+    // mesure plus longue que le tracé ⇒ la gorge doit remonter ⇒ profondeur réduite
+    const { report } = draftBuste({ ...demo, hauteurProfondeurEncolure: saillantGorge + 2 });
+    expect(reportValue(report, "ecartProfondeurEncolure")).toBeCloseTo(2, 9);
+    expect(reportValue(report, "profondeurEncolureSuggeree")).toBeLessThan(profondeurDevant);
+    const w = report.warnings.find((x) => x.code === "verification-profondeur-encolure")!;
+    expect(w.message).toContain("REMONTER");
+  });
+
+  it("galbe d'épaule plus court que le tracé : le livre fait AUGMENTER l'inclinaison", () => {
+    const { report } = draftBuste({ ...demo, hauteurGalbeEpaule: saillantAcromion - 1 });
+    expect(reportValue(report, "inclinaisonEpauleSuggeree")).toBeGreaterThan(26);
+    const w = report.warnings.find((x) => x.code === "verification-galbe-epaule")!;
+    expect(w.message).toContain("AUGMENTER");
+  });
+
+  it("la pente suggérée, saisie comme mesure, annule l'écart", () => {
+    const cible = saillantAcromion - 1;
+    const { report } = draftBuste({ ...demo, hauteurGalbeEpaule: cible });
+    const pente = reportValue(report, "penteEpauleSuggeree");
+    const corrige = draftBuste({ ...demo, hauteurGalbeEpaule: cible, penteEpaule: pente });
+    expect(Math.abs(reportValue(corrige.report, "ecartGalbeEpaule"))).toBeLessThan(1e-6);
+    expect(corrige.report.warnings.some((w) => w.code === "verification-galbe-epaule")).toBe(false);
+  });
+});
+
 describe("répartition des pinces de taille : cas extrêmes (fonction pure)", () => {
   it("rien à absorber → tout à zéro, pas de pince supplémentaire", () => {
     const r = repartirPincesTaille(0);

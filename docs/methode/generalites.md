@@ -391,6 +391,14 @@ dans `src/engine/` :
    d'épaule, tour du corps à la carrure, longueur d'enfourche, tours de
    cuisse/mollet) : ne participent pas à la construction ; prévoir leur place
    comme contrôles optionnels, pas comme entrées du tracé, p. 21/22/27-28.
+   *(Fait pour le buste le 2026-08-09 : profondeur d'encolure et galbe
+   d'épaule saisissables, lues sur le tracé, écart et valeur suggérée
+   affichés, aucune correction automatique — `buste.md` D4. Le tour du corps
+   à la carrure attend la manche, M5.)*
+11. **Largeur d'épaule OU largeur du dos** (p. 19, appliquées p. 41) : deux
+    relevés alternatifs pour la même construction, le choix dépendant de la
+    morphologie. Les deux sont saisissables, au moins l'un des deux est exigé,
+    la largeur du dos fait foi quand elle est relevée — `buste.md` §4.
 9. **Crans** sur le patron fini (montage + repère) — concerne M3+ (export) et
    les pièces à venir, p. 17.
 10. **Code couleur** rouge/noir/vert/bleu des états du patron — déjà le

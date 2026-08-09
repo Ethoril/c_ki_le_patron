@@ -234,6 +234,15 @@ moitié devant (bleue, profonde) séparées par la ligne d'épaule et la vertica
   les deux méthodes coïncident (et l'angle reste 18°) ; sinon, refaire les
   mesures. (Le choix épaule vs dos selon morphologie est en p. 19 :
   `generalites.md` §6.1.)
+  **Moteur** : la mesure acromion ↔ acromion se reporte **par moitié** sur le
+  demi-dos [transcription : le texte dit « à partir du milieu dos » sans le
+  préciser — entière, l'extrémité d'épaule sortirait du gabarit], d'où
+  `longueur d'épaule = (largeur dos / 2 − largeur d'encolure) / cos(18°)`.
+  Relevée, la largeur du dos **fait foi** ; la largeur d'épaule éventuellement
+  saisie devient le contrôle du livre (avertissement `epaule-largeur-dos-
+  discordante` au-delà de `TOLERANCE_EPAULE_LARGEUR_DOS`). Avec une pente
+  d'épaule mesurée, l'angle vient de la pente : `tan(angle) = pente /
+  (largeur dos / 2 − largeur d'encolure)`, et la longueur suit.
 - **Épaule devant** (fig. 3) : depuis l'extrémité de la largeur d'encolure
   devant, droite à **26°** ; y reporter la **largeur d'épaule du dos** ;
   fixer par une verticale. (À ce stade les deux épaules ont la même longueur ;
@@ -849,10 +858,26 @@ D2. **Encolure devant** (§3, §12). `snp-devant` = (largeur encolure, y épaule
 D3. **Saillant** (§9, C7). Ligne de poitrine à hauteur de poitrine sous la
    ligne d'épaule devant ; saillant = (écart/2, y poitrine), marqué d'une
    croix.
-D4. **Vérifications sur mesure** (§9, p. 51) : hauteur de profondeur
-   d'encolure → corrige la profondeur ; hauteur de galbe d'épaule → corrige
-   l'angle de 26°. « Ne participent pas à la construction » (p. 21) — v1 :
-   affichage d'un écart constaté, sans correction automatique.
+D4. **Vérifications sur mesure** (§9, p. 51) — **implémenté**. Les deux
+   mesures supplémentaires (p. 21) se lisent sur le devant **avant la pince
+   bretelle**, depuis le saillant :
+   - `hauteur de profondeur d'encolure` ↔ `dist(saillant, gorge)` (fig. 3) —
+     le saillant étant fixe, une mesure PLUS LONGUE que le tracé veut dire
+     que la gorge doit **remonter**, donc que la profondeur d'encolure
+     diminue. Le moteur publie la profondeur qui annulerait l'écart.
+   - `hauteur de galbe d'épaule` ↔ `dist(saillant, extrémité d'épaule)`
+     (fig. 4) — cette distance **décroît** quand l'épaule s'incline ; le
+     moteur cherche par dichotomie l'inclinaison qui rend la mesure relevée,
+     et publie la **pente d'épaule équivalente**, directement saisissable
+     dans la mesure optionnelle `penteEpaule`.
+
+   « Ne participent pas à la construction » (p. 21) : aucune correction n'est
+   appliquée au tracé — écart constaté, valeur suggérée, avertissement
+   au-delà de `TOLERANCE_VERIFICATION`. À noter : ces deux lectures ne
+   dépendent NI de la longueur du dos NI de la longueur devant (les deux
+   points se déplacent ensemble avec la ligne d'épaule devant) ; elles
+   contrôlent le tour de cou, la hauteur de poitrine, l'écart de poitrine et
+   — faiblement pour la longueur, fortement pour l'angle — l'épaule.
 D5. **Épaule devant + pince bretelle** (§4, §9). Épaule provisoire à 26°
    depuis `snp-devant`, longueur = longueur d'épaule (− 1 si option
    absorbée). Bretelle : `pince-bretelle-1` = milieu de l'épaule, 1er bras →
@@ -985,6 +1010,12 @@ neutre, le tracé est exactement celui du livre.
   bassin absente = 20 cm.
 - Nuque SOUS la ligne d'épaule (y > 0) ; encolure dos à tangente horizontale
   à la nuque ; gorge à tangente horizontale au milieu devant.
+- Largeur du dos (p. 41) : un relevé équivalent à la largeur d'épaule donne le
+  **même tracé au point près** ; l'extrémité d'épaule pince fermée tombe sur la
+  verticale de `largeur dos / 2`.
+- Mesures de vérification (p. 21, 51) : les relever **ne déplace aucun point**
+  du tracé ; relever la valeur lue sur le tracé annule l'écart et n'émet aucun
+  avertissement ; la pente suggérée, saisie, annule l'écart de galbe.
 - Emmanchures : passage à moins d'un epsilon des points imposés (carrure,
   bissectrice, platitude) ; arrivée horizontale au dessous-bras.
 - Vues assemblées : coutures d'épaule superposées pinces fermées ; encolure et
@@ -1004,6 +1035,22 @@ imposés d'emmanchure et les contrôles de saisie sont désormais confrontés au
 moteur et couverts par les tests. La correction C11 donne, pour le profil
 démo, dos 17,61 cm et devant 19,39 cm, soit 1,77 cm : la plage indicative de
 1 à 2 cm est retrouvée sans normalisation automatique de l'arc.
+
+## Relevé complet des mesures (2026-08-09)
+
+Deux manques de saisie relevés sur le chapitre « Généralités » sont comblés :
+
+- **Largeur du dos** (p. 19, appliquée p. 41) : alternative à la largeur
+  d'épaule, mesure optionnelle. Au moins une des deux est désormais exigée.
+- **Mesures supplémentaires de vérification** (p. 21, appliquées p. 51) :
+  hauteur de profondeur d'encolure et hauteur de galbe d'épaule, optionnelles,
+  regroupées dans une famille « Vérifications » du formulaire — elles ne
+  touchent jamais le tracé (§D4).
+
+Restent hors saisie, conformément au livre : le **tour du corps à la carrure**
+(contrôle de largeur de tête de manche, p. 22 — à ouvrir avec M5) et la
+**hauteur des petites hanches**, standardisée à mi-distance taille ↔ bassin
+(p. 24).
 
 Restent ouverts :
 

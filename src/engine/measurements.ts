@@ -21,8 +21,19 @@ export type Measurements = {
   hauteurPoitrine: number;
   /** Écart de poitrine : distance entre les deux saillants (cm). */
   ecartPoitrine: number;
-  /** Longueur d'épaule (cm). */
-  longueurEpaule: number;
+  /**
+   * Largeur d'épaule (cm) : du cou à l'acromion. Alternative à `largeurDos`
+   * (p. 19) — au moins une des deux est requise.
+   */
+  longueurEpaule?: number;
+  /**
+   * Largeur du dos (cm, ALTERNATIVE à `longueurEpaule`) : entre les deux
+   * acromions. Le livre la préfère quand le cou est court et fort ou le dos
+   * très arrondi, cas où la largeur d'épaule est peu fiable (p. 19) ; elle se
+   * reporte depuis le milieu dos et fixe l'extrémité d'épaule (p. 41, fig. 2).
+   * Relevée, elle fait foi ; la largeur d'épaule devient alors un contrôle.
+   */
+  largeurDos?: number;
   /**
    * Pente d'épaule (cm, OPTIONNELLE) : dénivelé vertical entre le point
    * d'encolure côté cou et la pointe d'épaule. Renseignée, elle remplace les
@@ -37,6 +48,20 @@ export type Measurements = {
    */
   hauteurBassin?: number;
   /**
+   * Hauteur de profondeur d'encolure (cm, OPTIONNELLE) : du milieu devant au
+   * niveau des clavicules jusqu'au saillant (p. 21, fig. 5A). Palliatif au tour
+   * de cou, difficile à relever. **Ne participe pas à la construction** : sert
+   * à vérifier la profondeur d'encolure sur le tracé (p. 51, fig. 3).
+   */
+  hauteurProfondeurEncolure?: number;
+  /**
+   * Hauteur de galbe d'épaule (cm, OPTIONNELLE) : du saillant à l'acromion
+   * (p. 21, fig. 5B). Avec la hauteur de poitrine, elle donne l'inclinaison
+   * d'épaule propre à la morphologie. **Ne participe pas à la construction** :
+   * sert à vérifier l'inclinaison sur le tracé (p. 51, fig. 4).
+   */
+  hauteurGalbeEpaule?: number;
+  /**
    * Aisance globale (cm au tour, OPTIONNELLE, 0–5, défaut produit 2) :
    * ajoutée aux tours de poitrine, de taille et de bassin avant division
    * (buste.md §Extensions hors livre). Absente = 0 = patron de base du livre.
@@ -50,7 +75,7 @@ export type MeasurementField = {
   key: MeasurementKey;
   label: string;
   /** Famille pour le regroupement du formulaire. */
-  group: "contours" | "longueurs" | "largeurs" | "poitrine" | "reglages";
+  group: "contours" | "longueurs" | "largeurs" | "poitrine" | "verifications" | "reglages";
   min: number;
   max: number;
   /** Champ facultatif : vide = comportement par défaut de la méthode. */
@@ -77,7 +102,24 @@ export const MEASUREMENT_FIELDS: MeasurementField[] = [
   },
   { key: "carrureDos", label: "Carrure dos", group: "largeurs", min: 26, max: 55 },
   { key: "carrureDevant", label: "Carrure devant", group: "largeurs", min: 24, max: 52 },
-  { key: "longueurEpaule", label: "Longueur d'épaule", group: "largeurs", min: 8, max: 20 },
+  {
+    key: "longueurEpaule",
+    label: "Largeur d'épaule",
+    group: "largeurs",
+    min: 8,
+    max: 20,
+    optional: true,
+    hint: "Du cou à l'acromion. Alternative à la largeur du dos : au moins une des deux.",
+  },
+  {
+    key: "largeurDos",
+    label: "Largeur du dos",
+    group: "largeurs",
+    min: 26,
+    max: 60,
+    optional: true,
+    hint: "D'un acromion à l'autre. Relevée, elle fait foi (dos arrondi, cou court et fort) ; la largeur d'épaule devient un contrôle.",
+  },
   {
     key: "penteEpaule",
     label: "Pente d'épaule",
@@ -89,6 +131,24 @@ export const MEASUREMENT_FIELDS: MeasurementField[] = [
   },
   { key: "hauteurPoitrine", label: "Hauteur de poitrine", group: "poitrine", min: 18, max: 40 },
   { key: "ecartPoitrine", label: "Écart de poitrine", group: "poitrine", min: 12, max: 30 },
+  {
+    key: "hauteurProfondeurEncolure",
+    label: "Hauteur de profondeur d'encolure",
+    group: "verifications",
+    min: 10,
+    max: 35,
+    optional: true,
+    hint: "Optionnelle — milieu devant (clavicules) → saillant. Ne modifie pas le tracé : vérifie la profondeur d'encolure.",
+  },
+  {
+    key: "hauteurGalbeEpaule",
+    label: "Hauteur de galbe d'épaule",
+    group: "verifications",
+    min: 12,
+    max: 35,
+    optional: true,
+    hint: "Optionnelle — saillant → acromion. Ne modifie pas le tracé : vérifie l'inclinaison d'épaule.",
+  },
   {
     key: "aisance",
     label: "Aisance",
@@ -107,7 +167,7 @@ export const AISANCE_DEFAUT = 2;
  * Profil de démonstration : valeurs d'exemple du livre (poitrine 88, taille 68,
  * bassin 92, cou 38) complétées par des mesures cohérentes pour une taille 38.
  */
-export const DEMO_MEASUREMENTS: Measurements = {
+export const DEMO_MEASUREMENTS: Measurements & { longueurEpaule: number } = {
   tourPoitrine: 88,
   tourTaille: 68,
   tourBassin: 92,
@@ -137,6 +197,16 @@ export function validateBounds(m: Measurements): ValidationError[] {
       errors.push({ key: f.key, message: `${f.label} : valeur manquante ou invalide` });
     } else if (v < f.min || v > f.max) {
       errors.push({ key: f.key, message: `${f.label} : doit être entre ${f.min} et ${f.max} cm` });
+    }
+  }
+  // p. 19 : largeur d'épaule OU largeur du dos, le choix dépend de la
+  // morphologie — mais l'épaule ne peut pas se construire sans l'une des deux
+  if (m.longueurEpaule === undefined && m.largeurDos === undefined) {
+    for (const key of ["longueurEpaule", "largeurDos"] as const) {
+      errors.push({
+        key,
+        message: "Largeur d'épaule ou largeur du dos : renseigner au moins l'une des deux (p. 19)",
+      });
     }
   }
   return errors;
@@ -170,7 +240,7 @@ export function checkCoherence(m: Measurements): ValidationWarning[] {
       message: "Hauteur de poitrine ≥ longueur devant : le saillant serait sous la taille.",
     });
   }
-  if (m.penteEpaule !== undefined && m.penteEpaule > 0.7 * m.longueurEpaule) {
+  if (m.penteEpaule !== undefined && m.longueurEpaule !== undefined && m.penteEpaule > 0.7 * m.longueurEpaule) {
     warnings.push({
       code: "pente-epaule-forte",
       message:

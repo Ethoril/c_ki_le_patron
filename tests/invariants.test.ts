@@ -27,11 +27,11 @@ function mulberry32(seed: number) {
 }
 
 /** Corps plausible : bornes physiques ET contrôles de cohérence respectés. */
-function randomBody(rnd: () => number): Measurements {
+function randomBody(rnd: () => number): Measurements & { longueurEpaule: number } {
   const range = (lo: number, hi: number) => lo + rnd() * (hi - lo);
   const half = (v: number) => Math.round(v * 2) / 2; // pas de 0,5 comme le formulaire
   const tourPoitrine = half(range(78, 125));
-  const m: Measurements = {
+  const m: Measurements & { longueurEpaule: number } = {
     tourPoitrine,
     tourTaille: half(tourPoitrine - range(6, 24)),
     tourBassin: half(tourPoitrine + range(-3, 12)),
@@ -54,15 +54,36 @@ function randomBody(rnd: () => number): Measurements {
   }
   // hauteur de bassin mesurée : plage FDA 17-23 (generalites §6) ; absente = 20
   if (rnd() < 0.5) m.hauteurBassin = half(range(17, 23));
+  // mesures de vérification (p. 21) : présentes une fois sur deux, elles ne
+  // doivent JAMAIS changer la géométrie
+  if (rnd() < 0.5) {
+    m.hauteurProfondeurEncolure = half(range(15, 26));
+    m.hauteurGalbeEpaule = half(range(16, 26));
+  }
   return m;
 }
 
+/**
+ * Même corps, mais relevé par la largeur du dos (p. 19) au lieu de la largeur
+ * d'épaule : la largeur du dos est construite pour être cohérente avec
+ * l'épaule d'origine (p. 41, fig. 2), l'épaule est retirée du relevé.
+ */
+function versLargeurDos(m: Measurements & { longueurEpaule: number }): Measurements {
+  const largeurEncolure = m.tourCou / 6 + 1;
+  const angle = m.penteEpaule === undefined ? 18 : (Math.asin(m.penteEpaule / m.longueurEpaule) * 180) / Math.PI;
+  const largeurDos = 2 * (largeurEncolure + m.longueurEpaule * Math.cos((angle * Math.PI) / 180));
+  const { longueurEpaule: _epaule, ...reste } = m;
+  return { ...reste, largeurDos };
+}
+
 const rnd = mulberry32(2026);
-const bodies: Measurements[] = [];
+const bodies: (Measurements & { longueurEpaule: number })[] = [];
 while (bodies.length < 200) {
   const m = randomBody(rnd);
   if (validateBounds(m).length === 0) bodies.push(m);
 }
+/** Les 50 premiers corps, relevés par la largeur du dos (alternative p. 19). */
+const bodiesLargeurDos = bodies.slice(0, 50).map(versLargeurDos);
 
 describe("invariants sur 200 mensurations plausibles", () => {
   it("contours fermés, aire non nulle, aucune auto-intersection", () => {
@@ -339,6 +360,80 @@ describe("invariants sur 200 mensurations plausibles", () => {
       expect(get("pinceDemiDos")).toBeLessThanOrEqual(METHOD.PLAFOND_PINCE_DEMI_DOS);
       expect(get("milieuDos")).toBeLessThanOrEqual(METHOD.PLAFOND_MILIEU_DOS);
       expect(get("cote")).toBeLessThanOrEqual(METHOD.PLAFOND_COTE);
+    }
+  });
+});
+
+describe("largeur du dos, alternative à la largeur d'épaule (p. 19, 41)", () => {
+  it("relevé équivalent → tracé stricitement identique", () => {
+    for (const [i, m] of bodiesLargeurDos.entries()) {
+      const reference = draftBuste(bodies[i]);
+      const alternatif = draftBuste(m);
+      for (const piece of ["dos", "devant"] as const) {
+        const a = reference[piece].points;
+        const b = alternatif[piece].points;
+        expect(Object.keys(b).sort()).toEqual(Object.keys(a).sort());
+        for (const id of Object.keys(a)) {
+          expect(dist(a[id], b[id]), `${piece}.${id} (corps ${i})`).toBeLessThan(1e-9);
+        }
+      }
+    }
+  });
+
+  it("l'extrémité d'épaule dos, pince fermée, tombe sur la verticale de largeur dos / 2", () => {
+    for (const m of bodiesLargeurDos) {
+      const { dos } = draftBuste(m);
+      const pince = dos.darts.find((d) => d.id === "pince-epaule-dos")!;
+      const epauleFermee = closeDart(pince, dos.points["epaule-dos"]);
+      expect(epauleFermee.x).toBeCloseTo(m.largeurDos! / 2, 6);
+    }
+  });
+
+  it("contours toujours fermés et sans auto-intersection", () => {
+    for (const m of bodiesLargeurDos) {
+      const { dos, devant } = draftBuste(m);
+      for (const piece of [dos, devant]) {
+        expect(isClosed(piece.outline, 1e-6), `${piece.id} fermé`).toBe(true);
+        expect(selfIntersects(piece.outline), `${piece.id} auto-intersection`).toBe(false);
+      }
+    }
+  });
+});
+
+describe("mesures de vérification (p. 21, 51) : jamais de correction automatique", () => {
+  it("les relever ne déplace aucun point du tracé", () => {
+    for (const m of bodies.slice(0, 50)) {
+      const sansVerif = { ...m, hauteurProfondeurEncolure: undefined, hauteurGalbeEpaule: undefined };
+      const avecVerif = { ...m, hauteurProfondeurEncolure: 21, hauteurGalbeEpaule: 24 };
+      const a = draftBuste(sansVerif);
+      const b = draftBuste(avecVerif);
+      for (const piece of ["dos", "devant"] as const) {
+        for (const id of Object.keys(a[piece].points)) {
+          expect(dist(a[piece].points[id], b[piece].points[id]), `${piece}.${id}`).toBeLessThan(1e-12);
+        }
+      }
+    }
+  });
+
+  it("la valeur suggérée annule l'écart constaté", () => {
+    for (const m of bodies.slice(0, 30)) {
+      const { report } = draftBuste(m);
+      const lu = (k: string) => report.values.find((v) => v.key === k)?.value;
+      // on relève « une mesure parfaite » : celle que donne le tracé lui-même
+      const parfait = {
+        ...m,
+        hauteurProfondeurEncolure: lu("verificationProfondeurEncolure")!,
+        hauteurGalbeEpaule: lu("verificationGalbeEpaule")!,
+      };
+      const { report: r2 } = draftBuste(parfait);
+      const get = (k: string) => r2.values.find((v) => v.key === k)!.value;
+      expect(Math.abs(get("ecartProfondeurEncolure"))).toBeLessThan(1e-9);
+      expect(Math.abs(get("ecartGalbeEpaule"))).toBeLessThan(1e-9);
+      // aucun avertissement, et la suggestion redonne les valeurs du tracé
+      expect(r2.warnings.some((w) => w.code.startsWith("verification-"))).toBe(false);
+      const { report: r3 } = draftBuste(m);
+      const angleDevant = r3.values.find((v) => v.key === "angleEpauleDevant")?.value;
+      if (angleDevant !== undefined) expect(get("inclinaisonEpauleSuggeree")).toBeCloseTo(angleDevant, 4);
     }
   });
 });

@@ -12,10 +12,15 @@ export function cartoucheLignes(m: Measurements, date: Date): string[] {
   const aisance = m.aisance ?? 0;
   const mentionAisance = aisance > 0 ? `aisance ${fmtCm(aisance)} cm au tour` : "sans aisance";
   const pente = m.penteEpaule !== undefined ? ` (pente ${fmtCm(m.penteEpaule)})` : "";
+  // p. 19 : l'épaule vient de la largeur d'épaule OU de la largeur du dos
+  const epaule =
+    m.largeurDos !== undefined
+      ? `Largeur dos ${fmtCm(m.largeurDos)}`
+      : `Épaule ${fmtCm(m.longueurEpaule ?? 0)}`;
   return [
     `Généré le ${date.toLocaleDateString("fr-FR")} — échelle 1:1 — SANS valeurs de couture, ${mentionAisance}`,
     `Poitrine ${m.tourPoitrine} · Taille ${m.tourTaille} · Bassin ${m.tourBassin} · Cou ${m.tourCou}`,
     `Long. dos ${m.longueurDos} · Long. devant ${m.longueurDevant} · Carrure dos ${m.carrureDos} · Carrure devant ${m.carrureDevant}`,
-    `Épaule ${m.longueurEpaule}${pente} · Haut. poitrine ${m.hauteurPoitrine} · Écart poitrine ${m.ecartPoitrine} (cm)`,
+    `${epaule}${pente} · Haut. poitrine ${m.hauteurPoitrine} · Écart poitrine ${m.ecartPoitrine} (cm)`,
   ];
 }

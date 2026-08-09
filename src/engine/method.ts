@@ -79,6 +79,22 @@ export const METHOD = {
   PINCE_BRETELLE: (tourPoitrine: number) => tourPoitrine / 20 + 1,
 
   /**
+   * Mesures supplémentaires de vérification (p. 21, appliquées p. 51) : au-delà
+   * de cet écart entre la mesure relevée sur la personne et la valeur lue sur
+   * le tracé, le livre invite à remonter/descendre la profondeur d'encolure ou
+   * à corriger l'inclinaison d'épaule. [transcription : le livre écrit « si
+   * nécessaire » sans chiffrer le seuil ; 0,5 cm = pas de saisie du formulaire]
+   */
+  TOLERANCE_VERIFICATION: 0.5,
+  /**
+   * Écart admis entre la longueur d'épaule relevée et celle déduite de la
+   * largeur du dos (p. 41 : « si les mesures ont été prises correctement, on
+   * obtiendra le même résultat […] si le résultat est différent, il faudra
+   * vérifier les mesures »). [transcription : seuil non chiffré par le livre]
+   */
+  TOLERANCE_EPAULE_LARGEUR_DOS: 0.5,
+
+  /**
    * Pince d'épaule dos, option « valeur absorbée » (p. 47, fig. 4) : pas de
    * pince tracée, l'épaule dos garde 1 cm d'excédent sur l'épaule devant —
    * dos plus long, sens confirmé par la relecture v3 (C12) –, résorbé en
@@ -219,6 +235,76 @@ export function anglesEpaule(longueurEpaule: number, penteEpaule?: number): Angl
   const ratio = clamp(penteEpaule / longueurEpaule, 0, Math.SQRT1_2); // sin(45°)
   const dos = (Math.asin(ratio) * 180) / Math.PI;
   return { dos, devant: dos + differentiel, plafonne: penteEpaule / longueurEpaule > Math.SQRT1_2 };
+}
+
+/** Épaule effective : longueur retenue, angles, et mesure dont elle vient. */
+export type EpauleResolue = AnglesEpaule & {
+  /** Longueur d'épaule utilisée par le tracé (cm). */
+  longueur: number;
+  /** Mesure dont vient la longueur (p. 19 : le choix dépend de la morphologie). */
+  source: "largeur-epaule" | "largeur-dos";
+  /** Longueur déduite de la largeur du dos, quand elle est relevée (contrôle p. 41). */
+  longueurDepuisLargeurDos?: number;
+};
+
+/**
+ * Largeur du dos → longueur d'épaule (p. 41, fig. 2). Le livre reporte la
+ * largeur du dos depuis le milieu dos et la fixe par une verticale ; de
+ * l'extrémité de la largeur d'encolure part une droite à 18° jusqu'à cette
+ * verticale, et la longueur d'épaule est l'hypoténuse ainsi obtenue.
+ * La pièce étant un demi-dos, la mesure acromion ↔ acromion se reporte par
+ * moitié [transcription : le texte dit « à partir du milieu dos » sans
+ * préciser la moitié — entière, l'extrémité d'épaule sortirait du gabarit].
+ */
+export function longueurEpauleDepuisLargeurDos(
+  largeurDos: number,
+  largeurEncolure: number,
+  angleDosDeg: number,
+): number {
+  const demi = largeurDos / 2 - largeurEncolure;
+  return demi / Math.cos((angleDosDeg * Math.PI) / 180);
+}
+
+/**
+ * Résout l'épaule à partir des mesures disponibles (p. 19, 41).
+ *
+ * - largeur d'épaule seule → longueur relevée, angles 18°/26° (ou pente).
+ * - largeur du dos relevée → elle **fait foi** (choix de morphologie p. 19 :
+ *   cou court et fort, dos très arrondi) ; la longueur d'épaule éventuellement
+ *   saisie devient un contrôle (p. 41).
+ * - avec une pente d'épaule mesurée (extension hors livre), l'angle dos vient
+ *   de la pente : tan(angle) = pente / (largeur dos / 2 − largeur d'encolure).
+ */
+export function resoudreEpaule(opts: {
+  longueurEpaule?: number;
+  largeurDos?: number;
+  largeurEncolure: number;
+  penteEpaule?: number;
+}): EpauleResolue {
+  const { longueurEpaule, largeurDos, largeurEncolure, penteEpaule } = opts;
+  const differentiel = METHOD.ANGLE_EPAULE_DEVANT - METHOD.ANGLE_EPAULE_DOS;
+  const demi = largeurDos === undefined ? 0 : largeurDos / 2 - largeurEncolure;
+
+  if (largeurDos !== undefined && Number.isFinite(largeurDos) && demi > 0) {
+    const brut =
+      penteEpaule === undefined || !Number.isFinite(penteEpaule)
+        ? METHOD.ANGLE_EPAULE_DOS
+        : (Math.atan2(Math.max(0, penteEpaule), demi) * 180) / Math.PI;
+    const dos = clamp(brut, 0, 45);
+    const longueur = demi / Math.cos((dos * Math.PI) / 180);
+    return {
+      dos,
+      devant: dos + differentiel,
+      plafonne: brut > 45,
+      longueur,
+      source: "largeur-dos",
+      longueurDepuisLargeurDos: longueur,
+    };
+  }
+
+  // largeur du dos absente (ou inexploitable) : la longueur relevée fait foi
+  const longueur = longueurEpaule ?? 0;
+  return { ...anglesEpaule(longueur, penteEpaule), longueur, source: "largeur-epaule" };
 }
 
 /**

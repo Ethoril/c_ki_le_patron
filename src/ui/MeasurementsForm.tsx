@@ -9,6 +9,7 @@ const GROUPES: { id: (typeof MEASUREMENT_FIELDS)[number]["group"]; label: string
   { id: "longueurs", label: "Longueurs" },
   { id: "largeurs", label: "Largeurs" },
   { id: "poitrine", label: "Poitrine" },
+  { id: "verifications", label: "Vérifications (ne modifient pas le tracé)" },
   { id: "reglages", label: "Réglages du patron" },
 ];
 

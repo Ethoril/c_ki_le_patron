@@ -15,7 +15,7 @@ import { pt, polar, dist, rotateAround, scale, sub, angleDeg } from "../geometry
 import type { Curve } from "../geometry/curve";
 import { splineThrough, hermite, concatCurves, curveLength, startTangent } from "../geometry/curve";
 import { Draft } from "../drafting";
-import { METHOD, anglesEpaule, repartirPincesTaille } from "../method";
+import { METHOD, resoudreEpaule, repartirPincesTaille } from "../method";
 import type { Measurements } from "../measurements";
 import type { PatternPiece, DraftReport, DraftWarning, ReportValue } from "../types";
 import {
@@ -154,6 +154,143 @@ function valeurIntercepteeParPince(jambe1: Pt, jambe2: Pt, saillant: Pt, y: numb
   return intersections.length < 2 ? 0 : Math.max(...intersections) - Math.min(...intersections);
 }
 
+/**
+ * D4 — Mesures supplémentaires de vérification (p. 21, appliquées p. 51).
+ * Elles « ne participent pas à la construction et ne modifient pas les étapes
+ * du tracé » : on les LIT sur le devant, pince bretelle non encore appliquée,
+ * depuis le saillant — vers le milieu devant pour la profondeur d'encolure
+ * (fig. 3), vers l'acromion pour l'inclinaison d'épaule (fig. 4). Le moteur
+ * affiche la valeur du tracé, l'écart à la mesure relevée, et la valeur qui
+ * annulerait l'écart ; il ne corrige rien tout seul (le livre laisse le
+ * modéliste juger « si nécessaire »).
+ */
+function verificationsSurMesure(args: {
+  saillant: Pt;
+  gorge: Pt;
+  snpDevant: Pt;
+  epauleProvisoire: Pt;
+  profondeurEncolureDevant: number;
+  angleDevant: number;
+  longueurPourAngleDevant: (angleDevantDeg: number) => number;
+  hauteurProfondeurEncolure?: number;
+  hauteurGalbeEpaule?: number;
+  warnings: DraftWarning[];
+}): ReportValue[] {
+  const {
+    saillant,
+    gorge,
+    snpDevant,
+    epauleProvisoire,
+    profondeurEncolureDevant,
+    angleDevant,
+    longueurPourAngleDevant,
+    warnings,
+  } = args;
+  const values: ReportValue[] = [];
+  const tol = METHOD.TOLERANCE_VERIFICATION;
+
+  // ——— Profondeur d'encolure (fig. 3) : saillant → point de gorge
+  const profondeurTracee = dist(saillant, gorge);
+  values.push({
+    key: "verificationProfondeurEncolure",
+    label: "Vérification — saillant → gorge sur le tracé",
+    value: profondeurTracee,
+    unit: "cm",
+    bookRef: "p. 51",
+  });
+  if (args.hauteurProfondeurEncolure !== undefined) {
+    const ecart = args.hauteurProfondeurEncolure - profondeurTracee;
+    values.push({
+      key: "ecartProfondeurEncolure",
+      label: "Écart de profondeur d'encolure (mesure − tracé)",
+      value: ecart,
+      unit: "cm",
+      bookRef: "p. 51",
+    });
+    // le saillant est fixe : allonger cette distance revient à REMONTER la
+    // gorge, donc à diminuer la profondeur d'encolure
+    const dx = Math.abs(saillant.x - gorge.x);
+    const dyCible = Math.sqrt(Math.max(0, args.hauteurProfondeurEncolure ** 2 - dx ** 2));
+    const profondeurSuggeree = profondeurEncolureDevant + ((saillant.y - gorge.y) - dyCible);
+    if (dyCible > 0) {
+      values.push({
+        key: "profondeurEncolureSuggeree",
+        label: "Profondeur d'encolure devant qui annulerait l'écart",
+        value: profondeurSuggeree,
+        unit: "cm",
+        bookRef: "p. 51",
+      });
+    }
+    if (Math.abs(ecart) > tol) {
+      warnings.push({
+        code: "verification-profondeur-encolure",
+        message: `Hauteur de profondeur d'encolure : ${args.hauteurProfondeurEncolure.toFixed(1)} cm relevés contre ${profondeurTracee.toFixed(1)} cm sur le tracé (écart ${ecart >= 0 ? "+" : ""}${ecart.toFixed(1)} cm). Le livre invite à ${ecart > 0 ? "REMONTER" : "DESCENDRE"} la profondeur d'encolure devant${dyCible > 0 ? `, vers ${profondeurSuggeree.toFixed(1)} cm au lieu de ${profondeurEncolureDevant.toFixed(1)}` : ""} (p. 51). Correction non appliquée : le tracé garde la formule du tour de cou.`,
+      });
+    }
+  }
+
+  // ——— Inclinaison d'épaule (fig. 4) : saillant → extrémité d'épaule
+  const galbeTrace = dist(saillant, epauleProvisoire);
+  values.push({
+    key: "verificationGalbeEpaule",
+    label: "Vérification — saillant → extrémité d'épaule sur le tracé",
+    value: galbeTrace,
+    unit: "cm",
+    bookRef: "p. 51",
+  });
+  if (args.hauteurGalbeEpaule !== undefined) {
+    const ecart = args.hauteurGalbeEpaule - galbeTrace;
+    values.push({
+      key: "ecartGalbeEpaule",
+      label: "Écart de galbe d'épaule (mesure − tracé)",
+      value: ecart,
+      unit: "cm",
+      bookRef: "p. 51",
+    });
+    // la distance saillant → acromion décroît quand l'épaule s'incline :
+    // recherche par dichotomie de l'angle devant qui rend la mesure relevée
+    const distancePour = (a: number) => dist(saillant, polar(snpDevant, 180 - a, longueurPourAngleDevant(a)));
+    const differentiel = METHOD.ANGLE_EPAULE_DEVANT - METHOD.ANGLE_EPAULE_DOS;
+    let lo = differentiel; // angle dos 0°
+    let hi = 45 + differentiel; // angle dos plafonné à 45°
+    let angleSuggere: number | undefined;
+    if ((distancePour(lo) - args.hauteurGalbeEpaule) * (distancePour(hi) - args.hauteurGalbeEpaule) <= 0) {
+      for (let i = 0; i < 60; i++) {
+        const mid = (lo + hi) / 2;
+        if (distancePour(mid) > args.hauteurGalbeEpaule) lo = mid;
+        else hi = mid;
+      }
+      angleSuggere = (lo + hi) / 2;
+    }
+    if (angleSuggere !== undefined) {
+      const angleDosSuggere = angleSuggere - differentiel;
+      values.push({
+        key: "inclinaisonEpauleSuggeree",
+        label: "Inclinaison d'épaule devant qui annulerait l'écart",
+        value: angleSuggere,
+        unit: "°",
+        bookRef: "p. 51",
+      });
+      values.push({
+        key: "penteEpauleSuggeree",
+        label: "Pente d'épaule équivalente (à saisir en mesure optionnelle)",
+        value:
+          longueurPourAngleDevant(angleSuggere) * Math.sin((angleDosSuggere * Math.PI) / 180),
+        unit: "cm",
+        bookRef: "p. 51",
+      });
+    }
+    if (Math.abs(ecart) > tol) {
+      warnings.push({
+        code: "verification-galbe-epaule",
+        message: `Hauteur de galbe d'épaule : ${args.hauteurGalbeEpaule.toFixed(1)} cm relevés contre ${galbeTrace.toFixed(1)} cm sur le tracé (écart ${ecart >= 0 ? "+" : ""}${ecart.toFixed(1)} cm). Le livre invite à ${ecart > 0 ? "DIMINUER" : "AUGMENTER"} l'inclinaison d'épaule${angleSuggere !== undefined ? `, vers ${angleSuggere.toFixed(1)}° au lieu de ${angleDevant.toFixed(1)}° au devant` : ""} (p. 51). Correction non appliquée : saisir la pente d'épaule pour la reporter au tracé.`,
+      });
+    }
+  }
+
+  return values;
+}
+
 export function draftBuste(m: Measurements): BusteResult {
   const warnings: DraftWarning[] = [];
   const values: ReportValue[] = [];
@@ -172,12 +309,47 @@ export function draftBuste(m: Measurements): BusteResult {
   // hauteur de bassin : mesurée, ou standard de la méthode (generalites §6)
   const hauteurBassin = m.hauteurBassin ?? METHOD.HAUTEUR_BASSIN_STANDARD;
 
-  // ——— Angles d'épaule : 18°/26° du livre, ou déduits de la pente mesurée
-  const angles = anglesEpaule(m.longueurEpaule, m.penteEpaule);
+  // ——— Épaule : largeur d'épaule relevée, ou largeur du dos si elle l'est
+  // (p. 19, 41) ; angles 18°/26° du livre, ou déduits de la pente mesurée
+  const epaule = resoudreEpaule({
+    longueurEpaule: m.longueurEpaule,
+    largeurDos: m.largeurDos,
+    largeurEncolure,
+    penteEpaule: m.penteEpaule,
+  });
+  const longueurEpaule = epaule.longueur;
+  const angles = epaule;
+  if (epaule.source === "largeur-dos") {
+    values.push({
+      key: "longueurEpauleDepuisLargeurDos",
+      label: "Longueur d'épaule déduite de la largeur du dos",
+      value: longueurEpaule,
+      unit: "cm",
+      bookRef: "p. 41",
+    });
+    // p. 41 : les deux mesures doivent donner le même résultat ; sinon,
+    // « il faudra vérifier les mesures »
+    if (m.longueurEpaule !== undefined) {
+      const ecart = longueurEpaule - m.longueurEpaule;
+      values.push({
+        key: "ecartEpauleLargeurDos",
+        label: "Écart largeur du dos ↔ largeur d'épaule",
+        value: ecart,
+        unit: "cm",
+        bookRef: "p. 41",
+      });
+      if (Math.abs(ecart) > METHOD.TOLERANCE_EPAULE_LARGEUR_DOS) {
+        warnings.push({
+          code: "epaule-largeur-dos-discordante",
+          message: `La largeur du dos donne une épaule de ${longueurEpaule.toFixed(1)} cm, la largeur d'épaule relevée ${m.longueurEpaule.toFixed(1)} cm (écart ${ecart.toFixed(1)} cm) : le livre demande de vérifier les deux mesures (p. 41). Le tracé suit la largeur du dos.`,
+        });
+      }
+    }
+  }
   if (angles.plafonne) {
     warnings.push({
       code: "pente-epaule-plafonnee",
-      message: `Pente d'épaule ${m.penteEpaule} cm incohérente avec la longueur d'épaule ${m.longueurEpaule} cm : angle plafonné à 45°.`,
+      message: `Pente d'épaule ${m.penteEpaule} cm incohérente avec la longueur d'épaule ${longueurEpaule.toFixed(1)} cm : angle plafonné à 45°.`,
     });
   }
 
@@ -253,10 +425,10 @@ export function draftBuste(m: Measurements): BusteResult {
   // milieu. Le bloc côté emmanchure est fermé par rotation de la jambe 2 sur
   // la jambe 1 ; l'épaule fermée est alors rectifiée à l'angle effectif et à
   // la longueur mesurée, puis la pointe d'épaule est rouverte par l'inverse.
-  const milieuEpauleDos = polar(snpDos, angles.dos, m.longueurEpaule / 2);
+  const milieuEpauleDos = polar(snpDos, angles.dos, longueurEpaule / 2);
   const jambeEpauleDos1 = dos.point(
     "pince-epaule-dos-1",
-    polar(snpDos, angles.dos, m.longueurEpaule / 2 - METHOD.PINCE_EPAULE_DOS_LARGEUR / 2),
+    polar(snpDos, angles.dos, longueurEpaule / 2 - METHOD.PINCE_EPAULE_DOS_LARGEUR / 2),
     "Première jambe de la pince d'épaule dos",
     "p. 46-48",
     {
@@ -266,7 +438,7 @@ export function draftBuste(m: Measurements): BusteResult {
   );
   const jambeEpauleDos2 = dos.point(
     "pince-epaule-dos-2",
-    polar(snpDos, angles.dos, m.longueurEpaule / 2 + METHOD.PINCE_EPAULE_DOS_LARGEUR / 2),
+    polar(snpDos, angles.dos, longueurEpaule / 2 + METHOD.PINCE_EPAULE_DOS_LARGEUR / 2),
     "Seconde jambe de la pince d'épaule dos",
     "p. 46-48",
     {
@@ -290,12 +462,12 @@ export function draftBuste(m: Measurements): BusteResult {
   );
   const epauleDosFermee = dos.point(
     "epaule-dos-fermee",
-    polar(snpDos, angles.dos, m.longueurEpaule),
+    polar(snpDos, angles.dos, longueurEpaule),
     `Extrémité d'épaule dos rectifiée pince fermée (${angles.dos.toFixed(0)}°)`,
     "p. 48",
     {
       dependsOn: ["measurement.longueurEpaule", "pince-epaule-dos-1", "pince-epaule-dos-2"],
-      inputs: { longueur: m.longueurEpaule, angle: angles.dos },
+      inputs: { longueur: longueurEpaule, angle: angles.dos },
     },
   );
   const epauleDos = dos.point(
@@ -581,9 +753,35 @@ export function draftBuste(m: Measurements): BusteResult {
   // méthode, buste.md §Extensions) + pince bretelle (p. 41, 49-53).
   // Avec la vraie pince d'épaule dos, les deux épaules fermées reprennent la
   // longueur mesurée ; l'embu de 1 cm ne concerne plus que la variante absorbée.
-  const longueurEpauleDevant = m.longueurEpaule;
+  const longueurEpauleDevant = longueurEpaule;
   const dirEpauleDevant = 180 - angles.devant; // vers le côté, en descendant
   const epauleProvisoire = polar(snpDevant, dirEpauleDevant, longueurEpauleDevant);
+
+  // D4 — Vérifications sur mesure (p. 51), AVANT la pince bretelle comme dans
+  // le livre : les deux mesures supplémentaires se lisent sur le tracé depuis
+  // le saillant. « Ces mesures ne participent pas à la construction » (p. 21) —
+  // le moteur affiche l'écart constaté, sans corriger le tracé.
+  const differentielEpaule = METHOD.ANGLE_EPAULE_DEVANT - METHOD.ANGLE_EPAULE_DOS;
+  values.push(
+    ...verificationsSurMesure({
+      saillant,
+      gorge,
+      snpDevant,
+      epauleProvisoire,
+      profondeurEncolureDevant: profEncolureDevant,
+      angleDevant: angles.devant,
+      // avec la largeur du dos, l'extrémité d'épaule reste sur sa verticale :
+      // changer l'inclinaison change aussi la longueur (p. 41, fig. 2)
+      longueurPourAngleDevant:
+        epaule.source === "largeur-dos" && m.largeurDos !== undefined
+          ? (a) => (m.largeurDos! / 2 - largeurEncolure) / Math.cos(((a - differentielEpaule) * Math.PI) / 180)
+          : () => longueurEpaule,
+      hauteurProfondeurEncolure: m.hauteurProfondeurEncolure,
+      hauteurGalbeEpaule: m.hauteurGalbeEpaule,
+      warnings,
+    }),
+  );
+
   const pb1 = devant.point(
     "pince-bretelle-1",
     polar(snpDevant, dirEpauleDevant, longueurEpauleDevant / 2),
